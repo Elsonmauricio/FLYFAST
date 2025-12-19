@@ -1,56 +1,86 @@
-import React from 'react';
-import TrackingForm from '../components/TrackingForm';
+import React, { useState } from 'react';
+import { useTracking } from '../hooks/useTracking';
+import { FaSearch, FaSpinner, FaExclamationCircle } from 'react-icons/fa';
 
 const Tracking = () => {
+  const [trackingCode, setTrackingCode] = useState('');
+  const { trackingInfo, isLoading, error, fetchTrackingInfo } = useTracking();
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    fetchTrackingInfo(trackingCode);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold text-flyfast-blue mb-4">
-            Rastreamento de Envio
-          </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Acompanhe em tempo real a localização do seu pacote entre Luanda e Lisboa
-          </p>
+    <div className="min-h-screen bg-gray-100 p-4 sm:p-8">
+      <div className="max-w-4xl mx-auto">
+        {/* Formulário de Busca */}
+        <div className="card mb-8">
+          <h1 className="text-3xl font-bold text-flyfast-blue mb-2">Rastreie o seu Envio</h1>
+          <p className="text-gray-600 mb-6">Insira o código de rastreamento para ver o estado atual da sua encomenda.</p>
+          <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-4">
+            <input
+              type="text"
+              value={trackingCode}
+              onChange={(e) => setTrackingCode(e.target.value)}
+              placeholder="Ex: FLY123456PT"
+              className="flex-grow input input-bordered w-full"
+              disabled={isLoading}
+            />
+            <button type="submit" className="btn btn-primary" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <FaSpinner className="animate-spin mr-2" />
+                  A Rastrear...
+                </>
+              ) : (
+                <>
+                  <FaSearch className="mr-2" />
+                  Rastrear
+                </>
+              )}
+            </button>
+          </form>
         </div>
 
-        <TrackingForm />
+        {/* Área de Resultados */}
+        {error && (
+          <div className="alert alert-error">
+            <FaExclamationCircle />
+            <span>{error}</span>
+          </div>
+        )}
 
-        {/* Help Section */}
-        <div className="mt-16 max-w-4xl mx-auto">
-          <div className="card bg-blue-50">
-            <h2 className="text-2xl font-bold text-flyfast-blue mb-6">
-              ❓ Precisa de Ajuda?
+        {trackingInfo && (
+          <div className="card">
+            <h2 className="text-2xl font-bold text-flyfast-blue mb-4">
+              Detalhes do Envio: <span className="font-mono">{trackingInfo.code}</span>
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div>
-                <h3 className="font-bold text-lg mb-3">Não tem o código de rastreio?</h3>
-                <ul className="space-y-2 text-gray-600">
-                  <li>• Verifique o email de confirmação do envio</li>
-                  <li>• Contacte o nosso suporte</li>
-                  <li>• Consulte a área do cliente</li>
-                </ul>
-              </div>
-              <div>
-                <h3 className="font-bold text-lg mb-3">Status do Envio</h3>
-                <ul className="space-y-2 text-gray-600">
-                  <li className="flex items-center">
-                    <span className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></span>
-                    Em Processamento
+            
+            <div className="mb-6">
+              <p className="text-lg">
+                <strong>Estado Atual:</strong>
+                <span className="ml-2 badge badge-lg badge-success">{trackingInfo.status}</span>
+              </p>
+              <p className="text-gray-500">Última atualização: {new Date(trackingInfo.lastUpdate).toLocaleString('pt-PT')}</p>
+            </div>
+
+            <div>
+              <h3 className="font-bold text-xl mb-4 text-gray-700">Histórico de Localizações</h3>
+              <ul className="steps steps-vertical">
+                {trackingInfo.history.map((item, index) => (
+                  <li key={index} className="step step-primary">
+                    <div className="flex flex-col items-start text-left ml-2">
+                      <span className="font-semibold">{item.location}</span>
+                      <span className="text-sm text-gray-500">{new Date(item.date).toLocaleString('pt-PT')}</span>
+                      <span className="text-sm">{item.status}</span>
+                    </div>
                   </li>
-                  <li className="flex items-center">
-                    <span className="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
-                    Em Trânsito
-                  </li>
-                  <li className="flex items-center">
-                    <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
-                    Entregue
-                  </li>
-                </ul>
-              </div>
+                ))}
+              </ul>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

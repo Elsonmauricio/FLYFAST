@@ -32,19 +32,19 @@ const ContactForm = () => {
     {
       icon: '📞',
       title: 'Telefone',
-      details: ['Luanda: +244 923 456 789', 'Lisboa: +351 912 345 678'],
+      details: ['Luanda: +244 948 787 653'],
       action: 'Ligar Agora'
     },
     {
       icon: '💬',
       title: 'WhatsApp',
-      details: ['+244 923 456 789', 'Disponível 24/7'],
+      details: ['+244 948 787 653', 'Disponível 24/7'],
       action: 'Enviar Mensagem'
     },
     {
       icon: '📧',
       title: 'Email',
-      details: ['info@flyfast.com', 'suporte@flyfast.com'],
+      details: ['flyfast163@gmail.com'],
       action: 'Enviar Email'
     }
   ];

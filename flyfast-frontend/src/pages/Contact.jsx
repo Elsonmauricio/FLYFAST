@@ -56,9 +56,9 @@ const Contact = () => {
                   <div>
                     <p className="font-semibold">Horário</p>
                     <p className="text-gray-600">
-                      Seg-Sex: 8:00-20:00<br />
-                      Sábado: 9:00-18:00<br />
-                      Domingo: 10:00-16:00
+                      Seg-Sex: 8:0-17:30<br />
+                      Sábado: Fechado<br />
+                      Domingo: Fechado
                     </p>
                   </div>
                 </div>
@@ -84,7 +84,7 @@ const Contact = () => {
                   <div>
                     <p className="font-semibold">Endereço</p>
                     <p className="text-gray-600">
-                      Av. da Liberdade, 456<br />
+                      Rua João Villaret 7, Queluz 2745-285 <br />
                       Lisboa, Portugal
                     </p>
                   </div>
@@ -94,8 +94,8 @@ const Contact = () => {
                   <div>
                     <p className="font-semibold">Horário</p>
                     <p className="text-gray-600">
-                      Seg-Sex: 9:00-19:00<br />
-                      Sábado: 10:00-17:00<br />
+                      Seg-Sex: 9:00-18:30<br />
+                      Sábado: Fechado<br />
                       Domingo: Fechado
                     </p>
                   </div>
@@ -125,11 +125,7 @@ const Contact = () => {
               <div className="flex flex-col md:flex-row justify-center items-center gap-6">
                 <div className="text-center">
                   <p className="font-bold text-lg">WhatsApp 24/7</p>
-                  <p className="text-flyfast-blue text-xl font-bold">+244 923 456 789</p>
-                </div>
-                <div className="text-center">
-                  <p className="font-bold text-lg">Emergência</p>
-                  <p className="text-flyfast-blue text-xl font-bold">+351 912 345 678</p>
+                  <p className="text-flyfast-blue text-xl font-bold">+244 948 787 653</p>
                 </div>
               </div>
               <p className="text-sm text-gray-500 mt-6">

@@ -1,21 +1,18 @@
 import React, { useState } from 'react';
 import ProductCard from '../components/ProductCard';
-import { PRODUCTS } from '../utils/constants';
+import { useCart } from '../contexts/CartContext'; // 1. Importar o hook
+import { useShopData } from '../hooks/useShopData';
 
 const Shop = () => {
   const [activeCategory, setActiveCategory] = useState('all');
-  const [cartItems, setCartItems] = useState(3); // Mock cart count
+  const { cartState } = useCart(); // 2. Obter o estado do carrinho
 
-  const categories = [
-    { id: 'all', name: 'Todos os Produtos' },
-    { id: 'merchandise', name: 'Merchandise' },
-    { id: 'materials', name: 'Materiais de Envio' },
-    { id: 'travel', name: 'Acessórios de Viagem' }
-  ];
+  // Toda a lógica de fetch, loading e error agora vem do hook!
+  const { products, categories, loading, error } = useShopData();
 
   const filteredProducts = activeCategory === 'all' 
-    ? PRODUCTS 
-    : PRODUCTS.filter(product => 
+    ? products 
+    : products.filter(product => 
         product.category.toLowerCase().includes(activeCategory)
       );
 
@@ -34,7 +31,7 @@ const Shop = () => {
             <div className="mt-6 md:mt-0">
               <button className="flex items-center space-x-2 bg-flyfast-yellow text-flyfast-blue px-6 py-3 rounded-lg font-bold hover:bg-yellow-400 transition">
                 <span>🛒</span>
-                <span>Carrinho ({cartItems})</span>
+                <span>Carrinho ({cartState.items.length})</span> {/* 3. Usar o valor real */}
               </button>
             </div>
           </div>
@@ -60,14 +57,18 @@ const Shop = () => {
         </div>
 
         {/* Products Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredProducts.map(product => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        {loading && <p className="text-center py-16">A carregar produtos...</p>}
+        {error && <p className="text-center py-16 text-red-500">{error}</p>}
+        {!loading && !error && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {filteredProducts.map(product => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        )}
 
         {/* Empty State */}
-        {filteredProducts.length === 0 && (
+        {!loading && !error && filteredProducts.length === 0 && (
           <div className="text-center py-16">
             <div className="text-6xl mb-6">📦</div>
             <h3 className="text-2xl font-bold text-gray-700 mb-4">

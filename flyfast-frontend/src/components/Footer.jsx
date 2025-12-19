@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import FlyfastLogo from '../assets/flyfast-logo.jpg'; // Assumindo que o seu logo está aqui
 
 const Footer = () => {
   return (
@@ -9,9 +10,9 @@ const Footer = () => {
           {/* Company Info */}
           <div>
             <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 bg-flyfast-yellow rounded-full flex items-center justify-center">
-                <span className="text-flyfast-blue font-bold text-xl">F</span>
-              </div>
+              <div className="w-12 h-12 flex items-center justify-center"> {/* Removido bg-flyfast-yellow e rounded-full se o logo já for redondo/colorido */}
+                            <img src={FlyfastLogo} alt="FLYFAST Logo" className="h-full w-auto" /> {/* Ajuste o tamanho conforme necessário */}
+                          </div>
               <h2 className="text-2xl font-bold font-heading">FLYFAST</h2>
             </div>
             <p className="text-gray-300 mb-4">
@@ -60,19 +61,15 @@ const Footer = () => {
             <ul className="space-y-3">
               <li className="flex items-center space-x-2">
                 <span>📞</span>
-                <span>Luanda: +244 923 456 789</span>
-              </li>
-              <li className="flex items-center space-x-2">
-                <span>📞</span>
-                <span>Lisboa: +351 912 345 678</span>
+                <span>Luanda: +244 948 787 653</span>
               </li>
               <li className="flex items-center space-x-2">
                 <span>📧</span>
-                <span>info@flyfast.com</span>
+                <span>flyfast163@gmail.com</span>
               </li>
               <li className="flex items-center space-x-2">
                 <span>💬</span>
-                <span>WhatsApp: +244 923 456 789</span>
+                <span>WhatsApp: +244 948 787 653</span>
               </li>
             </ul>
           </div>
@@ -91,7 +88,7 @@ const Footer = () => {
               <div>
                 <h4 className="font-bold">🇵🇹 Portugal</h4>
                 <p className="text-gray-300">
-                  Av. da Liberdade, 456<br />
+                  Rua João Villaret 7, Queluz 2745-285 <br />
                   Lisboa, Portugal
                 </p>
               </div>

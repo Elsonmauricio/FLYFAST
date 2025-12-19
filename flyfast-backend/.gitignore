@@ -1,0 +1,9 @@
+# Ficheiros de dependências
+node_modules
+
+# Ficheiros de log
+*.log
+
+# Ficheiros de ambiente e segredos
+.env
+*.json

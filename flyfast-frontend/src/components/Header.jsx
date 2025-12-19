@@ -1,94 +1,97 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import FlyfastLogo from '../assets/flyfast-logo.jpg'; // Assumindo que o seu logo está aqui
+import { useAuth } from '../contexts/AuthContext';
+import { useCart } from '../contexts/CartContext';
+import { FaBars, FaTimes, FaShoppingCart, FaUser } from 'react-icons/fa';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { authState } = useAuth();
+  const { checkoutState } = useCart();
+  
+  // Calcular total de itens no carrinho da Shopify
+  const cartItemCount = checkoutState.checkout?.lineItems?.reduce((total, item) => total + item.quantity, 0) || 0;
+
+  const toggleMenu = useCallback(() => {
+    setIsMenuOpen(prev => !prev);
+  }, []);
 
   return (
-    <header className="bg-flyfast-blue text-white sticky top-0 z-50 shadow-lg">
-      <div className="container mx-auto px-4 py-3">
-        <div className="flex justify-between items-center">
-          {/* Logo */}
-          <Link to="/" className="flex items-center space-x-3">
-            <div className="w-12 h-12 flex items-center justify-center"> {/* Removido bg-flyfast-yellow e rounded-full se o logo já for redondo/colorido */}
-              <img src={FlyfastLogo} alt="FLYFAST Logo" className="h-full w-auto" /> {/* Ajuste o tamanho conforme necessário */}
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold font-heading">FLYFAST</h1>
-              <p className="text-xs text-flyfast-yellow">Voe Connosco!</p>
-            </div>
+    <header className="bg-white shadow-md sticky top-0 z-50">
+      <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+        {/* Logo */}
+        <Link to="/" className="text-2xl font-bold text-flyfast-blue flex items-center">
+          <span className="text-flyfast-yellow mr-1">FLY</span>FAST
+        </Link>
+
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex items-center space-x-8">
+          <Link to="/" className="text-gray-600 hover:text-flyfast-blue font-medium">Início</Link>
+          <Link to="/tracking" className="text-gray-600 hover:text-flyfast-blue font-medium">Rastrear</Link>
+          <Link to="/shop" className="text-gray-600 hover:text-flyfast-blue font-medium">Loja</Link>
+          <Link to="/personal-shopper" className="text-gray-600 hover:text-flyfast-blue font-medium">Personal Shopper</Link>
+        </nav>
+
+        {/* Icons & Auth */}
+        <div className="hidden md:flex items-center space-x-6">
+          {/* Cart */}
+          <Link to="/cart" className="relative text-gray-600 hover:text-flyfast-blue">
+            <FaShoppingCart className="text-xl" />
+            {cartItemCount > 0 && (
+              <span className="absolute -top-2 -right-2 bg-flyfast-yellow text-flyfast-blue text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                {cartItemCount}
+              </span>
+            )}
           </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
-            <Link to="/" className="hover:text-flyfast-yellow transition font-medium">
-              Home
+          {/* Auth Buttons - A Lógica Principal */}
+          {authState.isAuthenticated ? (
+            <Link to="/account" className="flex items-center space-x-2 text-flyfast-blue font-semibold hover:text-blue-800">
+              <FaUser />
+              <span>Minha Conta</span>
             </Link>
-            <Link to="/tracking" className="hover:text-flyfast-yellow transition font-medium">
-              Rastreio
-            </Link>
-            <Link to="/routes" className="hover:text-flyfast-yellow transition font-medium">
-              Rotas
-            </Link>
-            <Link to="/shop" className="hover:text-flyfast-yellow transition font-medium">
-              Loja
-            </Link>
-            <Link to="/personal-shopper" className="hover:text-flyfast-yellow transition font-medium">
-              Personal Shopper
-            </Link>
-            <Link to="/contact" className="hover:text-flyfast-yellow transition font-medium">
-              Contacto
-            </Link>
-            <Link 
-              to="/account" 
-              className="bg-flyfast-yellow text-flyfast-blue px-6 py-2 rounded-lg font-bold hover:bg-yellow-400 transition shadow-md"
-            >
-              Área Cliente
-            </Link>
-          </nav>
-
-          {/* Mobile Menu Button */}
-          <button 
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="md:hidden text-2xl"
-          >
-            {isMenuOpen ? '✕' : '☰'}
-          </button>
-        </div>
-
-        {/* Mobile Navigation */}
-        {isMenuOpen && (
-          <div className="md:hidden mt-4 pb-4">
-            <div className="flex flex-col space-y-4">
-              <Link to="/" className="hover:text-flyfast-yellow transition font-medium py-2">
-                Home
+          ) : (
+            <div className="flex items-center space-x-4">
+              <Link to="/login" className="text-gray-600 hover:text-flyfast-blue font-medium">
+                Entrar
               </Link>
-              <Link to="/tracking" className="hover:text-flyfast-yellow transition font-medium py-2">
-                Rastreio
-              </Link>
-              <Link to="/routes" className="hover:text-flyfast-yellow transition font-medium py-2">
-                Rotas
-              </Link>
-              <Link to="/shop" className="hover:text-flyfast-yellow transition font-medium py-2">
-                Loja
-              </Link>
-              <Link to="/personal-shopper" className="hover:text-flyfast-yellow transition font-medium py-2">
-                Personal Shopper
-              </Link>
-              <Link to="/contact" className="hover:text-flyfast-yellow transition font-medium py-2">
-                Contacto
-              </Link>
-              <Link 
-                to="/account" 
-                className="bg-flyfast-yellow text-flyfast-blue px-6 py-3 rounded-lg font-bold hover:bg-yellow-400 transition text-center"
-              >
-                Área Cliente
+              <Link to="/register" className="btn btn-primary px-4 py-2 rounded-lg text-sm font-bold shadow-sm">
+                Registar
               </Link>
             </div>
-          </div>
-        )}
+          )}
+        </div>
+
+        {/* Mobile Menu Button */}
+        <button className="md:hidden text-gray-600 focus:outline-none" onClick={toggleMenu}>
+          {isMenuOpen ? <FaTimes className="text-2xl" /> : <FaBars className="text-2xl" />}
+        </button>
       </div>
+
+      {/* Mobile Menu */}
+      {isMenuOpen && (
+        <div className="md:hidden bg-white border-t">
+          <div className="flex flex-col p-4 space-y-4">
+            <Link to="/" className="text-gray-600 hover:text-flyfast-blue" onClick={toggleMenu}>Início</Link>
+            <Link to="/tracking" className="text-gray-600 hover:text-flyfast-blue" onClick={toggleMenu}>Rastrear</Link>
+            <Link to="/shop" className="text-gray-600 hover:text-flyfast-blue" onClick={toggleMenu}>Loja</Link>
+            <Link to="/personal-shopper" className="text-gray-600 hover:text-flyfast-blue" onClick={toggleMenu}>Personal Shopper</Link>
+            <Link to="/cart" className="text-gray-600 hover:text-flyfast-blue flex items-center" onClick={toggleMenu}>
+              Carrinho ({cartItemCount})
+            </Link>
+            <div className="border-t pt-4 flex flex-col space-y-3">
+              {authState.isAuthenticated ? (
+                <Link to="/account" className="text-flyfast-blue font-semibold" onClick={toggleMenu}>Minha Conta</Link>
+              ) : (
+                <>
+                  <Link to="/login" className="text-gray-600" onClick={toggleMenu}>Entrar</Link>
+                  <Link to="/register" className="text-flyfast-blue font-semibold" onClick={toggleMenu}>Registar</Link>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

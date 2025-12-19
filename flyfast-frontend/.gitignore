@@ -1,0 +1,9 @@
+# Ficheiros de dependências
+node_modules
+
+# Pasta de build de produção
+build
+
+# Ficheiros de ambiente e cache
+.env
+.cache

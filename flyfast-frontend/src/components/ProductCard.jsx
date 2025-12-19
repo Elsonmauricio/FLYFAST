@@ -1,11 +1,21 @@
 import React, { useState } from 'react';
+import { useCart } from '../contexts/CartContext';
+import { FaSpinner } from 'react-icons/fa';
 
 const ProductCard = ({ product }) => {
   const [quantity, setQuantity] = useState(1);
+  const [isAdding, setIsAdding] = useState(false);
+  const { addToCart } = useCart();
 
-  const handleAddToCart = () => {
-    // Implement cart functionality
-    alert(`${quantity} ${product.name} adicionado ao carrinho!`);
+  const handleAddToCart = async () => {
+    // A API da Shopify precisa do ID da variante do produto, não do ID do produto.
+    // Para simplificar, vamos usar a primeira variante disponível.
+    const variantId = product.variants[0].id;
+
+    setIsAdding(true);
+    await addToCart(variantId, quantity);
+    setIsAdding(false);
+    // Opcional: mostrar uma notificação de sucesso
   };
 
   const handleFavorite = () => {
@@ -88,9 +98,14 @@ const ProductCard = ({ product }) => {
       <div className="space-y-2">
         <button 
           onClick={handleAddToCart}
-          className="w-full btn-primary py-3"
+          className="w-full btn-primary py-3 flex items-center justify-center"
+          disabled={isAdding}
         >
-          🛒 Adicionar ao Carrinho
+          {isAdding ? (
+            <FaSpinner className="animate-spin" />
+          ) : (
+            '🛒 Adicionar ao Carrinho'
+          )}
         </button>
         <button className="w-full border-2 border-flyfast-blue text-flyfast-blue py-3 rounded-lg font-semibold hover:bg-blue-50 transition">
           Ver Detalhes
