@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { shopifyClient } from "../lib/shopify";
+// import { shopifyClient } from "../lib/shopify";
 
 export const useShopData = () => {
   const [products, setProducts] = useState([]);
@@ -13,9 +13,9 @@ export const useShopData = () => {
         setError(null);
 
         // Buscar todos os produtos da loja Shopify
-        const productsData = await shopifyClient.product.fetchAll();
-
-        setProducts(productsData);
+        // const productsData = await shopifyClient.product.fetchAll();
+        // setProducts(productsData);
+        setProducts([]);
       } catch (err) {
         console.error(err);
         setError("Não foi possível carregar os produtos da loja.");

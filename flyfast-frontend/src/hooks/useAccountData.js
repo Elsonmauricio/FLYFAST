@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { shopifyClient } from '../lib/shopify';
+// import { shopifyClient } from '../lib/shopify';
 
 // Hook para buscar o histórico de envios do utilizador
 export const useShipments = () => {
@@ -56,6 +56,7 @@ export const useOrders = () => {
 
   useEffect(() => {
     const fetchOrders = async () => {
+      /*
       const customerAccessToken = localStorage.getItem('shopify_customer_access_token');
 
       if (!authState.isAuthenticated || !customerAccessToken) {
@@ -120,6 +121,9 @@ export const useOrders = () => {
       } finally {
         setIsLoading(false);
       }
+      */
+      setIsLoading(false);
+      setOrders([]);
     };
     fetchOrders();
   }, [authState.token]);

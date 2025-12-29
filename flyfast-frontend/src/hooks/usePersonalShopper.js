@@ -13,14 +13,20 @@ export const usePersonalShopper = () => {
     setIsSuccess(false);
 
     try {
+      const isFormData = requestData instanceof FormData;
+      const headers = {
+        // Se o utilizador estiver logado, enviamos o token para associar o pedido
+        ...(authState.token && { 'Authorization': `Bearer ${authState.token}` }),
+      };
+
+      if (!isFormData) {
+        headers['Content-Type'] = 'application/json';
+      }
+
       const response = await fetch('/api/personal-shopper/requests', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // Se o utilizador estiver logado, enviamos o token para associar o pedido
-          ...(authState.token && { 'Authorization': `Bearer ${authState.token}` }),
-        },
-        body: JSON.stringify(requestData),
+        headers,
+        body: isFormData ? requestData : JSON.stringify(requestData),
       });
 
       if (!response.ok) {

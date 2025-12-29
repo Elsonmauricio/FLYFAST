@@ -1,30 +1,38 @@
-import { useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
-/**
- * Hook para acionar eventos de notificação no backend.
- */
 export const useNotifications = () => {
+  const [notifications, setNotifications] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
   const { authState } = useAuth();
 
-  const triggerNotification = useCallback(async (notificationData) => {
-    // Só aciona se o utilizador estiver autenticado
-    if (!authState.token) return;
+  const fetchNotifications = useCallback(async () => {
+    if (!authState?.token) return;
 
+    setIsLoading(true);
+    setError(null);
     try {
-      // Endpoint da API para acionar o envio de uma notificação
-      await fetch('/api/notifications/trigger', {
-        method: 'POST',
+      const response = await fetch('/api/notifications', {
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${authState.token}`,
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify(notificationData),
       });
-    } catch (error) {
-      console.error('Falha ao acionar a notificação:', error);
-    }
-  }, [authState.token]);
 
-  return { triggerNotification };
+      if (!response.ok) {
+        throw new Error('Falha ao carregar notificações.');
+      }
+
+      const data = await response.json();
+      setNotifications(data);
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [authState?.token]);
+
+  return { notifications, isLoading, error, fetchNotifications };
 };

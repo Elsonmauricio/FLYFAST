@@ -8,19 +8,23 @@ require('express-async-errors'); // Para capturar erros em rotas async
 require('dotenv').config();
 
 // Importar configuração Firebase
-const { db } = require('./config/firebase');
+const { db, auth } = require('./config/firebase');
 
 // Importar rotas
 const authRoutes = require('./routes/auth');
 const shipmentRoutes = require('./routes/shipments');
-const shopRoutes = require('./routes/shop');
+const accountRoutes = require('./routes/account');
 const personalShopperRoutes = require('./routes/personalShopper');
 const notificationRoutes = require('./routes/notifications');
 const adminRoutes = require('./routes/admin');
 const userRoutes = require('./routes/users');
+const scheduleRoutes = require('./routes/schedules');
+// const shopifyRoutes = require('./routes/shopify');
 
 // Inicializar app
 const app = express();
+
+app.set('trust proxy', 1); 
 
 // Middlewares de segurança
 app.use(helmet());
@@ -52,12 +56,14 @@ app.use(express.urlencoded({ extended: true }));
 
 // Configurar rotas
 app.use('/api/auth', authRoutes);
+app.use('/api/account', accountRoutes);
 app.use('/api/shipments', shipmentRoutes);
-app.use('/api/shop', shopRoutes);
 app.use('/api/personal-shopper', personalShopperRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/schedules', scheduleRoutes);
+// app.use('/api/shopify', shopifyRoutes);
 
 // Rota de saúde
 app.get('/api/health', (req, res) => {
@@ -89,7 +95,6 @@ app.get('/api/docs', (req, res) => {
     endpoints: {
       auth: '/api/auth',
       shipments: '/api/shipments',
-      shop: '/api/shop',
       personalShopper: '/api/personal-shopper',
       admin: '/api/admin'
     },

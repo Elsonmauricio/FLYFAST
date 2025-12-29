@@ -1,6 +1,7 @@
 {
   "name": "flyfast-website",
   "version": "1.0.0",
+  "proxy": "http://localhost:5000", 
   "private": true,
   "dependencies": {
     "autoprefixer": "^10.4.13",

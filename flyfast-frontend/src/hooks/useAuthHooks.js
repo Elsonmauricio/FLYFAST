@@ -4,9 +4,8 @@ import {
   createUserWithEmailAndPassword,
   signOut,
 } from 'firebase/auth';
-import { auth, db } from '../lib/firebase';
-import { shopifyClient } from '../lib/shopify';
-import { doc, setDoc } from 'firebase/firestore';
+import { auth } from '../lib/firebase';
+// import { shopifyClient } from '../lib/shopify';
 
 export const useLogin = () => {
   const [error, setError] = useState(null);
@@ -18,6 +17,7 @@ export const useLogin = () => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
 
+      /*
       // Após o login no Firebase, obtemos o token de acesso do cliente da Shopify
       const tokenResponse = await shopifyClient.customer.createAccessToken({
         email: email,
@@ -31,11 +31,12 @@ export const useLogin = () => {
         // Não bloqueia o login, mas avisa que a parte da Shopify falhou
         console.warn("Login de cliente na Shopify falhou:", tokenResponse.customerUserErrors);
       }
+      */
 
     } catch (err) {
       setError('Email ou palavra-passe inválidos.');
       // Garante que limpamos o token da Shopify em caso de falha
-      localStorage.removeItem('shopify_customer_access_token');
+      // localStorage.removeItem('shopify_customer_access_token');
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -55,7 +56,7 @@ export const useLogout = () => {
     try {
       await signOut(auth);
       // Limpa também o token da Shopify
-      localStorage.removeItem('shopify_customer_access_token');
+      // localStorage.removeItem('shopify_customer_access_token');
     } catch (err) {
       setError('Ocorreu um erro ao terminar a sessão.');
       console.error(err);
@@ -84,28 +85,20 @@ export const useRegister = () => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
+      const token = await user.getIdToken();
 
-      // Guarda os dados adicionais do utilizador no Firestore
-      await setDoc(doc(db, 'users', user.uid), {
-        name: name,
-        email: email,
-        memberSince: new Date().getFullYear(),
-        loyaltyPoints: 0,
+      // Chama o endpoint para criar o perfil no backend (Firestore + Shopify)
+      const response = await fetch('/api/users/create-profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name, email }),
       });
 
-      // Após criar o utilizador no Firebase, cria também na Shopify
-      const [firstName, ...lastNameParts] = name.split(' ');
-      const lastName = lastNameParts.join(' ');
-
-      const createShopifyCustomer = await shopifyClient.customer.create({
-        email: email,
-        password: password,
-        firstName: firstName,
-        lastName: lastName,
-      });
-
-      if (createShopifyCustomer.customerUserErrors?.length > 0) {
-        console.warn("Criação de cliente na Shopify falhou:", createShopifyCustomer.customerUserErrors);
+      if (!response.ok) {
+        throw new Error('Falha ao criar perfil do utilizador.');
       }
 
       // O AuthContext irá detetar o novo utilizador e atualizar o estado global

@@ -1,4 +1,4 @@
-const { auth } = require('../config/firebase');
+const { auth, db } = require('../config/firebase');
 
 /**
  * Middleware para verificar se o utilizador está autenticado via Firebase ID Token.
@@ -18,6 +18,14 @@ const isAuthenticated = async (req, res, next) => {
     // auth.verifyIdToken() valida o token e retorna os dados do utilizador
     const decodedToken = await auth.verifyIdToken(idToken);
     req.user = decodedToken; // req.user agora contém uid, email, role, etc.
+
+    // Se o token não tiver a role definida (custom claim), vamos buscar ao Firestore
+    if (!req.user.role) {
+      const userDoc = await db.collection('users').doc(decodedToken.uid).get();
+      if (userDoc.exists) {
+        req.user.role = userDoc.data().role;
+      }
+    }
     next();
   } catch (error) {
     console.error('Erro ao verificar o token de autenticação:', error);

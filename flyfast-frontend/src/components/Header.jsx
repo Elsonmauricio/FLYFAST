@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
-import { FaBars, FaTimes, FaShoppingCart, FaUser } from 'react-icons/fa';
+import { FaBars, FaTimes, FaShoppingCart, FaUser, FaShieldAlt } from 'react-icons/fa';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -17,25 +17,32 @@ const Header = () => {
   }, []);
 
   return (
-    <header className="bg-white shadow-md sticky top-0 z-50">
+    <header className="bg-flyfast-blue text-white shadow-md sticky top-0 z-50">
       <div className="container mx-auto px-4 py-4 flex justify-between items-center">
         {/* Logo */}
-        <Link to="/" className="text-2xl font-bold text-flyfast-blue flex items-center">
+        <Link to="/" className="text-2xl font-bold text-white flex items-center">
           <span className="text-flyfast-yellow mr-1">FLY</span>FAST
         </Link>
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-8">
-          <Link to="/" className="text-gray-600 hover:text-flyfast-blue font-medium">Início</Link>
-          <Link to="/tracking" className="text-gray-600 hover:text-flyfast-blue font-medium">Rastrear</Link>
-          <Link to="/shop" className="text-gray-600 hover:text-flyfast-blue font-medium">Loja</Link>
-          <Link to="/personal-shopper" className="text-gray-600 hover:text-flyfast-blue font-medium">Personal Shopper</Link>
+          <Link to="/" className="text-gray-200 hover:text-white font-medium">Início</Link>
+          <Link to="/tracking" className="text-gray-200 hover:text-white font-medium">Rastrear</Link>
+          <Link to="/routes" className="text-gray-200 hover:text-white font-medium">Rotas</Link>
+          <Link to="/shop" className="text-gray-200 hover:text-white font-medium">Loja</Link>
+          <Link to="/personal-shopper" className="text-gray-200 hover:text-white font-medium">Personal Shopper</Link>
+          {authState.user?.role === 'admin' && (
+            <Link to="/admin" className="text-flyfast-yellow hover:text-yellow-300 font-bold flex items-center">
+              <FaShieldAlt className="mr-1" />
+              Admin
+            </Link>
+          )}
         </nav>
 
         {/* Icons & Auth */}
         <div className="hidden md:flex items-center space-x-6">
           {/* Cart */}
-          <Link to="/cart" className="relative text-gray-600 hover:text-flyfast-blue">
+          <Link to="/cart" className="relative text-gray-200 hover:text-white">
             <FaShoppingCart className="text-xl" />
             {cartItemCount > 0 && (
               <span className="absolute -top-2 -right-2 bg-flyfast-yellow text-flyfast-blue text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
@@ -46,13 +53,13 @@ const Header = () => {
 
           {/* Auth Buttons - A Lógica Principal */}
           {authState.isAuthenticated ? (
-            <Link to="/account" className="flex items-center space-x-2 text-flyfast-blue font-semibold hover:text-blue-800">
+            <Link to="/account" className="flex items-center space-x-2 text-white font-semibold hover:text-gray-200">
               <FaUser />
               <span>Minha Conta</span>
             </Link>
           ) : (
             <div className="flex items-center space-x-4">
-              <Link to="/login" className="text-gray-600 hover:text-flyfast-blue font-medium">
+              <Link to="/login" className="text-gray-200 hover:text-white font-medium">
                 Entrar
               </Link>
               <Link to="/register" className="btn btn-primary px-4 py-2 rounded-lg text-sm font-bold shadow-sm">
@@ -63,7 +70,7 @@ const Header = () => {
         </div>
 
         {/* Mobile Menu Button */}
-        <button className="md:hidden text-gray-600 focus:outline-none" onClick={toggleMenu}>
+        <button className="md:hidden text-white focus:outline-none" onClick={toggleMenu}>
           {isMenuOpen ? <FaTimes className="text-2xl" /> : <FaBars className="text-2xl" />}
         </button>
       </div>
@@ -76,6 +83,12 @@ const Header = () => {
             <Link to="/tracking" className="text-gray-600 hover:text-flyfast-blue" onClick={toggleMenu}>Rastrear</Link>
             <Link to="/shop" className="text-gray-600 hover:text-flyfast-blue" onClick={toggleMenu}>Loja</Link>
             <Link to="/personal-shopper" className="text-gray-600 hover:text-flyfast-blue" onClick={toggleMenu}>Personal Shopper</Link>
+            {authState.user?.role === 'admin' && (
+              <Link to="/admin" className="text-red-600 font-bold flex items-center" onClick={toggleMenu}>
+                <FaShieldAlt className="mr-2" />
+                Painel Admin
+              </Link>
+            )}
             <Link to="/cart" className="text-gray-600 hover:text-flyfast-blue flex items-center" onClick={toggleMenu}>
               Carrinho ({cartItemCount})
             </Link>

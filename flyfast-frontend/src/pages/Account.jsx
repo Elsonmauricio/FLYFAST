@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLogout } from '../hooks/useAuthHooks';
 import { useShipments, useOrders } from '../hooks/useAccountData';
-import { FaSpinner, FaExclamationCircle } from 'react-icons/fa';
+import { useNotifications } from '../hooks/useNotifications';
+import { FaSpinner, FaExclamationCircle, FaUserShield, FaCopy } from 'react-icons/fa';
 
 const Account = () => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -12,6 +14,84 @@ const Account = () => {
 
   const { shipments, isLoading: isLoadingShipments, error: shipmentsError } = useShipments();
   const { orders, isLoading: isLoadingOrders, error: ordersError } = useOrders();
+  const { notifications, isLoading: isLoadingNotifications, error: notificationsError, fetchNotifications } = useNotifications();
+
+  // Estados para Personal Shopper
+  const [personalShopperRequests, setPersonalShopperRequests] = useState([]);
+  const [isLoadingPersonalShopper, setIsLoadingPersonalShopper] = useState(false);
+  const [personalShopperError, setPersonalShopperError] = useState(null);
+
+  // Estados para Rotas
+  const [routes, setRoutes] = useState([]);
+  const [isLoadingRoutes, setIsLoadingRoutes] = useState(false);
+
+  const menuItems = [
+    { id: 'profile', label: 'Perfil', icon: '👤' },
+    ...(userData.role !== 'admin' ? [
+      { id: 'shipments', label: 'Meus Envios', icon: '📦' },
+      { id: 'orders', label: 'Meus Pedidos', icon: '🛍️' },
+      { id: 'personal-shopper', label: 'Personal Shopper', icon: '👔' },
+      { id: 'routes', label: 'Rotas Disponíveis', icon: '✈️' },
+      { id: 'addresses', label: 'Moradas', icon: '📍' },
+    ] : []),
+    { id: 'notifications', label: 'Notificações', icon: '🔔' },
+    { id: 'settings', label: 'Definições', icon: '⚙️' }
+  ];
+
+  useEffect(() => {
+    if (activeTab === 'notifications') {
+      fetchNotifications();
+    }
+  }, [activeTab, fetchNotifications]);
+
+  // Fetch de pedidos Personal Shopper quando a aba é ativada
+  useEffect(() => {
+    if (activeTab === 'personal-shopper' && authState.token) {
+      const fetchRequests = async () => {
+        setIsLoadingPersonalShopper(true);
+        try {
+          const response = await fetch('/api/personal-shopper/my-requests', {
+            headers: { 'Authorization': `Bearer ${authState.token}` }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setPersonalShopperRequests(data);
+          }
+        } catch (err) {
+          setPersonalShopperError('Erro ao carregar os seus pedidos.');
+        } finally {
+          setIsLoadingPersonalShopper(false);
+        }
+      };
+      fetchRequests();
+    }
+  }, [activeTab, authState.token]);
+
+  // Fetch de rotas quando a aba é ativada
+  useEffect(() => {
+    if (activeTab === 'routes') {
+      const fetchRoutes = async () => {
+        setIsLoadingRoutes(true);
+        try {
+          const response = await fetch('/api/schedules');
+          if (response.ok) {
+            const data = await response.json();
+            setRoutes(data);
+          }
+        } catch (err) {
+          console.error('Erro ao carregar rotas');
+        } finally {
+          setIsLoadingRoutes(false);
+        }
+      };
+      fetchRoutes();
+    }
+  }, [activeTab]);
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    alert(`Código de rastreio ${text} copiado!`);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -37,6 +117,12 @@ const Account = () => {
                 {userData.loyaltyPoints || 0} pts
               </div>
               <p className="text-sm">Pontos de Fidelidade</p>
+              {userData.role === 'admin' && (
+                <Link to="/admin" className="mt-4 inline-flex items-center bg-white/20 hover:bg-white/30 border border-white/40 text-white px-4 py-2 rounded-lg font-bold transition">
+                  <FaUserShield className="mr-2" />
+                  Painel Admin
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -49,15 +135,7 @@ const Account = () => {
           <div className="lg:w-1/4">
             <div className="card sticky top-24">
               <nav className="space-y-2">
-                {[
-                  { id: 'profile', label: 'Perfil', icon: '👤' },
-                  { id: 'shipments', label: 'Meus Envios', icon: '📦' },
-                  { id: 'orders', label: 'Meus Pedidos', icon: '🛍️' },
-                  { id: 'personal-shopper', label: 'Personal Shopper', icon: '👔' },
-                  { id: 'addresses', label: 'Moradas', icon: '📍' },
-                  { id: 'notifications', label: 'Notificações', icon: '🔔' },
-                  { id: 'settings', label: 'Definições', icon: '⚙️' }
-                ].map(item => (
+                {menuItems.map(item => (
                   <button
                     key={item.id}
                     onClick={() => setActiveTab(item.id)}
@@ -170,12 +248,24 @@ const Account = () => {
                         <div key={shipment.id} className="card">
                           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
                             <div>
-                              <h3 className="font-bold text-lg">
+                              <h3 className="font-bold text-lg flex items-center gap-2">
                                 Envio #{shipment.id}
+                                <button 
+                                  onClick={() => copyToClipboard(shipment.id)}
+                                  className="text-gray-400 hover:text-flyfast-blue transition-colors text-base"
+                                  title="Copiar código de rastreio"
+                                >
+                                  <FaCopy />
+                                </button>
                               </h3>
                               <p className="text-gray-600">
                                 {shipment.from} → {shipment.to} • {new Date(shipment.date).toLocaleDateString('pt-PT')}
                               </p>
+                              {shipment.currentLocation && (
+                                <p className="text-sm text-blue-600 mt-1 font-medium">
+                                  📍 {shipment.currentLocation}
+                                </p>
+                              )}
                             </div>
                             <span className={`px-3 py-1 rounded-full text-sm font-semibold mt-2 md:mt-0 ${
                               shipment.status === 'Entregue' 
@@ -270,14 +360,102 @@ const Account = () => {
                 <h2 className="text-2xl font-bold text-flyfast-blue mb-6">
                   Meus Pedidos Personal Shopper
                 </h2>
-                <div className="card">
-                  <p className="text-gray-600 mb-6">
-                    Aqui pode ver e gerir todos os seus pedidos de Personal Shopper.
-                  </p>
-                  <button className="btn-primary">
+                
+                <div className="mb-6">
+                  <button className="btn-primary w-full md:w-auto">
                     👔 Novo Pedido Personal Shopper
                   </button>
                 </div>
+
+                {isLoadingPersonalShopper && (
+                  <div className="flex justify-center items-center p-16">
+                    <FaSpinner className="animate-spin text-4xl text-flyfast-blue" />
+                  </div>
+                )}
+
+                {personalShopperError && (
+                  <div className="alert alert-error">
+                    <FaExclamationCircle />
+                    <span>{personalShopperError}</span>
+                  </div>
+                )}
+
+                {!isLoadingPersonalShopper && !personalShopperError && (
+                  <div className="space-y-4">
+                    {personalShopperRequests.length === 0 ? (
+                      <div className="card text-center py-8 text-gray-500">
+                        Ainda não tem pedidos de Personal Shopper.
+                      </div>
+                    ) : (
+                      personalShopperRequests.map(request => (
+                        <div key={request.id} className="card">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="font-bold text-lg">{request.productName}</h3>
+                              <p className="text-sm text-gray-500">
+                                {new Date(request.createdAt).toLocaleDateString('pt-PT')}
+                              </p>
+                              <p className="text-gray-700 mt-1">Orçamento: {request.budget || 'N/A'}</p>
+                            </div>
+                            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                              request.status === 'completed' ? 'bg-green-100 text-green-800' :
+                              request.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                              'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {request.status === 'pending' ? 'Pendente' : 
+                               request.status === 'processing' ? 'Em Processamento' :
+                               request.status === 'purchased' ? 'Comprado' :
+                               request.status === 'completed' ? 'Concluído' : request.status}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Routes Tab */}
+            {activeTab === 'routes' && (
+              <div>
+                <h2 className="text-2xl font-bold text-flyfast-blue mb-6">
+                  Rotas e Envios Disponíveis
+                </h2>
+                {isLoadingRoutes && (
+                  <div className="flex justify-center items-center p-16">
+                    <FaSpinner className="animate-spin text-4xl text-flyfast-blue" />
+                  </div>
+                )}
+                {!isLoadingRoutes && (
+                  <div className="space-y-4">
+                    {routes.length === 0 ? (
+                      <p className="text-center text-gray-500 py-8">Não há rotas agendadas no momento.</p>
+                    ) : (
+                      routes.map(route => (
+                        <div key={route.id} className="card flex flex-col md:flex-row justify-between items-center gap-4">
+                           <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-bold text-lg">{route.from}</span>
+                                <span className="text-gray-400">→</span>
+                                <span className="font-bold text-lg">{route.to}</span>
+                              </div>
+                              <p className="text-gray-600 text-sm">
+                                {new Date(route.date).toLocaleDateString('pt-PT')} • {route.departureTime || 'Horário a definir'}
+                              </p>
+                           </div>
+                           <div className="text-right">
+                              <p className="text-flyfast-blue font-bold text-xl">{route.price}</p>
+                              <p className="text-xs text-gray-500">por Kg</p>
+                           </div>
+                           <button className="btn-primary py-2 px-4 text-sm">
+                             Reservar
+                           </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -287,49 +465,48 @@ const Account = () => {
                 <h2 className="text-2xl font-bold text-flyfast-blue mb-6">
                   Notificações
                 </h2>
-                <div className="space-y-4">
-                  {[
-                    {
-                      id: 1,
-                      title: 'Envio em andamento',
-                      message: 'Seu envio LDA-LIS-2025-045 está em trânsito para Lisboa',
-                      date: 'Hoje, 10:30',
-                      read: false
-                    },
-                    {
-                      id: 2,
-                      title: 'Promoção especial',
-                      message: '20% de desconto em todos os envios esta semana',
-                      date: 'Ontem, 15:45',
-                      read: true
-                    },
-                    {
-                      id: 3,
-                      title: 'Pedido confirmado',
-                      message: 'Seu pedido PS-2025-001 foi confirmado pela equipa',
-                      date: '12 Jan, 09:20',
-                      read: true
-                    }
-                  ].map(notification => (
+                {isLoadingNotifications && (
+                  <div className="flex justify-center items-center p-16">
+                    <FaSpinner className="animate-spin text-4xl text-flyfast-blue" />
+                  </div>
+                )}
+                {notificationsError && (
+                  <div className="alert alert-error">
+                    <FaExclamationCircle />
+                    <span>{notificationsError}</span>
+                  </div>
+                )}
+                {!isLoadingNotifications && !notificationsError && (
+                  <div className="space-y-4">
+                    {notifications.length === 0 ? (
+                      <p className="text-center text-gray-500 py-8">Não tem notificações novas.</p>
+                    ) : (
+                      notifications.map(notification => (
                     <div 
                       key={notification.id} 
                       className={`card ${!notification.read ? 'border-l-4 border-flyfast-blue' : ''}`}
                     >
                       <div className="flex justify-between items-start">
                         <div>
-                          <h3 className="font-bold">{notification.title}</h3>
+                          <h3 className="font-bold">{notification.title || 'Nova Notificação'}</h3>
                           <p className="text-gray-600 mt-1">{notification.message}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm text-gray-500">{notification.date}</p>
+                          <p className="text-sm text-gray-500">
+                            {notification.createdAt 
+                              ? new Date(notification.createdAt).toLocaleDateString('pt-PT') 
+                              : notification.date}
+                          </p>
                           {!notification.read && (
                             <span className="inline-block w-2 h-2 bg-flyfast-blue rounded-full mt-2"></span>
                           )}
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

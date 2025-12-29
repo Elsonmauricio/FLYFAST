@@ -1,5 +1,6 @@
 const Shipment = require('../models/Shipment');
 const AdminLog = require('../models/AdminLog');
+const { db } = require('../config/firebase');
 
 class ShipmentController {
   /**
@@ -64,19 +65,22 @@ class ShipmentController {
    */
   async getUserShipments(req, res) {
     try {
-      const { page = 1, limit = 10 } = req.query;
       const userId = req.user.uid;
 
-      const result = await Shipment.findForUser({
-        userId,
-        page: parseInt(page, 10),
-        limit: parseInt(limit, 10)
+      const snapshot = await db.collection('shipments')
+        .where('userId', '==', userId)
+        .orderBy('createdAt', 'desc')
+        .get();
+
+      const shipments = [];
+      snapshot.forEach(doc => {
+        shipments.push({ id: doc.id, ...doc.data() });
       });
 
-      res.json({ success: true, ...result });
+      res.json(shipments);
     } catch (error) {
       console.error("Erro ao obter envios do utilizador:", error);
-      res.status(500).json({ error: 'Erro ao obter os seus envios.' });
+      res.status(500).json({ error: 'Erro ao obter os seus envios.', details: error.message });
     }
   }
 

@@ -28,13 +28,12 @@ const Contact = () => {
       <div className="bg-white py-12">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center text-flyfast-blue mb-12">
-            📍 Encontre-nos
+             Encontre-nos
           </h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             {/* Angola Office */}
             <div className="card">
               <div className="flex items-center mb-6">
-                <span className="text-3xl mr-3">🇦🇴</span>
                 <div>
                   <h3 className="text-2xl font-bold">Luanda, Angola</h3>
                   <p className="text-gray-600">Sede Principal</p>
@@ -46,8 +45,8 @@ const Contact = () => {
                   <div>
                     <p className="font-semibold">Endereço</p>
                     <p className="text-gray-600">
-                      Rua da Missão, 123<br />
-                      Luanda, Angola
+                      Rua direita do colegio São Vicente de Paulo, antigo<br />
+                      Luanda Sul, Viana, Angola
                     </p>
                   </div>
                 </div>
@@ -63,16 +62,22 @@ const Contact = () => {
                   </div>
                 </div>
               </div>
-              {/* Mock Map */}
-              <div className="mt-6 bg-gray-200 rounded-lg h-48 flex items-center justify-center">
-                <p className="text-gray-500">Mapa de Luanda</p>
+              {/* Map */}
+              <div className="mt-6 bg-gray-200 rounded-lg h-48 overflow-hidden">
+                <iframe 
+                  title="Mapa Luanda"
+                  width="100%" 
+                  height="100%" 
+                  frameBorder="0" 
+                  scrolling="no" 
+                  src="https://maps.google.com/maps?q=Rua+direita+do+colegio+S%C3%A3o+Vicente+de+Paulo,+antigo+Luanda+Sul,+Viana,+Angola&t=&z=15&ie=UTF8&iwloc=&output=embed"
+                ></iframe>
               </div>
             </div>
 
             {/* Portugal Office */}
             <div className="card">
               <div className="flex items-center mb-6">
-                <span className="text-3xl mr-3">🇵🇹</span>
                 <div>
                   <h3 className="text-2xl font-bold">Lisboa, Portugal</h3>
                   <p className="text-gray-600">Escritório Europeu</p>
@@ -101,9 +106,16 @@ const Contact = () => {
                   </div>
                 </div>
               </div>
-              {/* Mock Map */}
-              <div className="mt-6 bg-gray-200 rounded-lg h-48 flex items-center justify-center">
-                <p className="text-gray-500">Mapa de Lisboa</p>
+              {/* Map */}
+              <div className="mt-6 bg-gray-200 rounded-lg h-48 overflow-hidden">
+                <iframe 
+                  title="Mapa Lisboa"
+                  width="100%" 
+                  height="100%" 
+                  frameBorder="0" 
+                  scrolling="no" 
+                  src="https://maps.google.com/maps?q=Rua+Jo%C3%A3o+Villaret+7,+Queluz+2745-285&t=&z=15&ie=UTF8&iwloc=&output=embed"
+                ></iframe>
               </div>
             </div>
           </div>

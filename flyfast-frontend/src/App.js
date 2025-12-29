@@ -11,6 +11,7 @@ import Contact from './pages/Contact';
 import Account from './pages/Account';
 import Login from './pages/Login'; // Importar a nova página de Login
 import Register from './pages/Register';
+import Admin from './pages/Admin';
 import { CartProvider } from './contexts/CartContext';
 import { AuthProvider } from './contexts/AuthContext'; // Importar o AuthProvider
 import ProtectedRoute from './components/ProtectedRoute'; // Importar o ProtectedRoute
@@ -37,6 +38,10 @@ function App() {
                 <Route 
                   path="/account" 
                   element={<ProtectedRoute><Account /></ProtectedRoute>} 
+                />
+                <Route 
+                  path="/admin" 
+                  element={<ProtectedRoute><Admin /></ProtectedRoute>} 
                 />
               </Routes>
             </main>

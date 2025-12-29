@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
-const { adminAuth } = require('../middleware/auth');
+// const { adminAuth } = require('../middleware/auth');
 const { uploadSingle } = require('../middleware/upload');
 const { isAuthenticated, hasRole } = require('../middleware/authMiddleware');
 
@@ -17,9 +17,11 @@ router.post('/users/:id/impersonate', isAuthenticated, hasRole(['admin']), admin
 
 // Envios
 router.get('/shipments', isAuthenticated, hasRole(['admin']), adminController.getShipments);
+router.post('/shipments', isAuthenticated, hasRole(['admin']), adminController.createShipment);
 router.get('/shipments/:id', isAuthenticated, hasRole(['admin']), adminController.getShipmentDetails);
 router.put('/shipments/:id', isAuthenticated, hasRole(['admin']), adminController.updateShipment);
 router.delete('/shipments/:id', isAuthenticated, hasRole(['admin']), adminController.deleteShipment);
+router.post('/shipments/:id/resend-email', isAuthenticated, hasRole(['admin']), adminController.resendShipmentEmail);
 router.post('/shipments/export', isAuthenticated, hasRole(['admin']), adminController.exportShipments);
 
 // Pedidos
@@ -79,12 +81,6 @@ router.get('/api-keys', isAuthenticated, hasRole(['admin']), adminController.get
 router.post('/api-keys', isAuthenticated, hasRole(['admin']), adminController.createApiKey);
 router.put('/api-keys/:id', isAuthenticated, hasRole(['admin']), adminController.updateApiKey);
 router.delete('/api-keys/:id', isAuthenticated, hasRole(['admin']), adminController.deleteApiKey);
-
-// Staff Management
-router.get('/staff', isAuthenticated, hasRole(['admin']), adminController.getStaff);
-router.post('/staff', isAuthenticated, hasRole(['admin']), adminController.createStaff);
-router.put('/staff/:id', isAuthenticated, hasRole(['admin']), adminController.updateStaff);
-router.delete('/staff/:id', isAuthenticated, hasRole(['admin']), adminController.deleteStaff);
 
 // Notificações admin
 router.get('/notifications', isAuthenticated, hasRole(['admin']), adminController.getAdminNotifications);

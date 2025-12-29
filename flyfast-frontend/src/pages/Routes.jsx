@@ -1,48 +1,90 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import RouteCard from '../components/RouteCard';
-import { UPCOMING_ROUTES } from '../utils/constants';
+import BookingModal from '../components/BookingModal';
+import { FaSpinner, FaExclamationCircle } from 'react-icons/fa';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const Routes = () => {
+  const { authState } = useAuth();
+  const navigate = useNavigate();
   const [filter, setFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('');
+  const [routes, setRoutes] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const routes = [
-    ...UPCOMING_ROUTES,
-    {
-      id: 4,
-      from: 'Lisboa',
-      to: 'Luanda',
-      date: '2025-01-18',
-      time: '16:00',
-      available: 5,
-      status: 'Quase Esgotado'
-    },
-    {
-      id: 5,
-      from: 'Luanda',
-      to: 'Lisboa',
-      date: '2025-01-19',
-      time: '11:00',
-      available: 18,
-      status: 'Disponível'
-    },
-    {
-      id: 6,
-      from: 'Lisboa',
-      to: 'Luanda',
-      date: '2025-01-20',
-      time: '13:00',
-      available: 3,
-      status: 'Quase Esgotado'
+  // Estados para o Modal de Reserva
+  const [selectedRoute, setSelectedRoute] = useState(null);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [isBookingLoading, setIsBookingLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchRoutes = async () => {
+      try {
+        const response = await fetch('/api/schedules');
+        if (!response.ok) {
+          throw new Error('Falha ao carregar as rotas.');
+        }
+        const data = await response.json();
+        setRoutes(data);
+      } catch (err) {
+        console.error(err);
+        setError('Não foi possível carregar as rotas em tempo real.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchRoutes();
+  }, []);
+
+  const handleOpenBooking = (route) => {
+    if (!authState.isAuthenticated) {
+      // Se não estiver logado, redireciona para login
+      navigate('/login', { state: { from: '/routes' } });
+      return;
     }
-  ];
+    setSelectedRoute(route);
+    setIsBookingModalOpen(true);
+  };
 
-  const filteredRoutes = filter === 'all' 
-    ? routes 
-    : routes.filter(route => 
-        filter === 'luanda-lisboa' 
-          ? route.from === 'Luanda'
-          : route.from === 'Lisboa'
-      );
+  const handleBookingSubmit = async (bookingData) => {
+    setIsBookingLoading(true);
+    try {
+      const response = await fetch('/api/shipments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authState.token}`
+        },
+        body: JSON.stringify(bookingData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao criar reserva');
+      }
+
+      alert('Reserva efetuada com sucesso! Verifique o seu email.');
+      setIsBookingModalOpen(false);
+      // Recarregar rotas para atualizar a capacidade disponível
+      window.location.reload(); 
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setIsBookingLoading(false);
+    }
+  };
+
+  const filteredRoutes = routes.filter(route => {
+    const routeFilterMatch = filter === 'all' ||
+        (filter === 'luanda-lisboa' ? route.from === 'Luanda' : route.from === 'Lisboa');
+
+    const dateFilterMatch = !dateFilter || route.date === dateFilter;
+
+    return routeFilterMatch && dateFilterMatch;
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -59,7 +101,7 @@ const Routes = () => {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 max-w-4xl mx-auto">
             <div className="bg-white/20 backdrop-blur-sm rounded-lg p-6 text-center">
               <div className="text-3xl font-bold mb-2">6-8h</div>
               <p className="text-sm">Tempo de Voo</p>
@@ -89,7 +131,7 @@ const Routes = () => {
               Próximas Partidas
             </h2>
             
-            <div className="flex space-x-4">
+            <div className="flex flex-wrap gap-4 items-center justify-center md:justify-end w-full md:w-auto">
               <button
                 onClick={() => setFilter('all')}
                 className={`px-6 py-2 rounded-lg font-semibold ${
@@ -120,18 +162,59 @@ const Routes = () => {
               >
                 Lisboa → Luanda
               </button>
+              <input 
+                type="date"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 font-semibold focus:outline-none focus:ring-2 focus:ring-flyfast-blue w-full sm:w-auto"
+                aria-label="Filtrar por data"
+              />
             </div>
           </div>
 
+          {/* Loading State */}
+          {isLoading && (
+            <div className="flex justify-center items-center py-20">
+              <FaSpinner className="animate-spin text-4xl text-flyfast-blue" />
+            </div>
+          )}
+
+          {/* Error State */}
+          {error && (
+            <div className="alert alert-error mb-8">
+              <FaExclamationCircle />
+              <span>{error}</span>
+            </div>
+          )}
+
           {/* Routes Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredRoutes.map(route => (
-              <RouteCard key={route.id} route={route} />
-            ))}
-          </div>
+          {!isLoading && !error && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
+              {filteredRoutes.map(route => {
+                // Sanitização e proteção visual: Garante que a barra nunca ultrapassa 100%
+                const rawCapacity = parseInt(String(route.capacity).replace(/[^0-9]/g, '')) || 0;
+                const rawAvailable = parseInt(String(route.available).replace(/[^0-9]/g, '')) || 0;
+                const capacity = rawCapacity > 0 ? rawCapacity : 50; // Evita divisão por zero
+                const available = rawAvailable > capacity ? capacity : rawAvailable; // Clampa o valor
+
+                return (
+                  <div key={route.id} className="relative w-full overflow-hidden rounded-xl shadow-sm hover:shadow-md transition-all bg-white">
+                    <RouteCard 
+                      route={{
+                        ...route,
+                        capacity,
+                        available
+                      }} 
+                      onBook={handleOpenBooking}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Empty State */}
-          {filteredRoutes.length === 0 && (
+          {!isLoading && !error && filteredRoutes.length === 0 && (
             <div className="text-center py-16">
               <div className="text-6xl mb-6">✈️</div>
               <h3 className="text-2xl font-bold text-gray-700 mb-4">
@@ -144,75 +227,134 @@ const Routes = () => {
           )}
         </div>
 
-        {/* Pricing Info */}
-        <div className="card max-w-6xl mx-auto mb-12">
-          <h2 className="text-2xl font-bold text-flyfast-blue mb-8 text-center">
-            💰 Tabela de Preços
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="p-4 text-left">Tipo de Envio</th>
-                  <th className="p-4 text-left">Peso</th>
-                  <th className="p-4 text-left">Luanda → Lisboa</th>
-                  <th className="p-4 text-left">Lisboa → Luanda</th>
-                  <th className="p-4 text-left">Tempo Estimado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  {
-                    type: 'Documentos',
-                    weight: 'Até 1kg',
-                    toLisbon: '15.000 AOA',
-                    toLuanda: '35€',
-                    time: '24-48h'
-                  },
-                  {
-                    type: 'Pequeno',
-                    weight: '1-5kg',
-                    toLisbon: '35.000 AOA',
-                    toLuanda: '75€',
-                    time: '24-48h'
-                  },
-                  {
-                    type: 'Médio',
-                    weight: '5-15kg',
-                    toLisbon: '65.000 AOA',
-                    toLuanda: '140€',
-                    time: '48-72h'
-                  },
-                  {
-                    type: 'Grande',
-                    weight: '15-30kg',
-                    toLisbon: '120.000 AOA',
-                    toLuanda: '250€',
-                    time: '48-72h'
-                  },
-                  {
-                    type: 'Extra',
-                    weight: '30-50kg',
-                    toLisbon: '200.000 AOA',
-                    toLuanda: '400€',
-                    time: '72-96h'
-                  }
-                ].map((row, index) => (
-                  <tr key={index} className="border-b hover:bg-gray-50">
-                    <td className="p-4 font-semibold">{row.type}</td>
-                    <td className="p-4">{row.weight}</td>
-                    <td className="p-4 text-flyfast-blue font-bold">{row.toLisbon}</td>
-                    <td className="p-4 text-flyfast-blue font-bold">{row.toLuanda}</td>
-                    <td className="p-4">{row.time}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="text-gray-600 text-sm mt-6 text-center">
-            * Preços incluem seguro básico. Seguro completo disponível por +20%
-          </p>
-        </div>
+        {/* Modal de Reserva */}
+        <BookingModal 
+          isOpen={isBookingModalOpen}
+          onClose={() => setIsBookingModalOpen(false)}
+          route={selectedRoute}
+          onSubmit={handleBookingSubmit}
+          isLoading={isBookingLoading}
+        />
+
+{/* Pricing Info */}
+<div className="card max-w-6xl mx-auto mb-12">
+  <h2 className="text-2xl font-bold text-flyfast-blue mb-8 text-center">
+    💰 Tabela de Preços
+  </h2>
+  
+  <div className="mb-6 text-center">
+    <p className="text-lg font-semibold text-flyfast-blue">
+      Preço base: <span className="text-2xl">12.99€ POR KG</span>
+    </p>
+    <p className="text-sm text-gray-600 mt-1">
+      FLYFAST - PRESTAÇÃO DE SERVIÇOS, LDA
+    </p>
+  </div>
+
+  <div className="overflow-x-auto mb-8">
+    <h3 className="text-xl font-bold mb-4 text-center">📦 Artigos Específicos</h3>
+    <table className="w-full">
+      <thead>
+        <tr className="bg-gray-100">
+          <th className="p-4 text-left">Artigo</th>
+          <th className="p-4 text-left">Preço Fixo</th>
+          <th className="p-4 text-left">Taxa de Fatura (%)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {[
+          {
+            article: 'Perfumes/Duplos',
+            price: '7€ | 10€ KG',
+            tax: '35% da fatura'
+          },
+          {
+            article: 'Cartões Visa',
+            price: '15 €',
+            tax: '-'
+          },
+          {
+            article: 'Documentos',
+            price: '15 €',
+            tax: '-'
+          },
+          {
+            article: 'Telemóveis',
+            price: '20 €',
+            tax: '23% da fatura'
+          },
+          {
+            article: 'Computadores',
+            price: '35 €',
+            tax: '23% da fatura'
+          },
+          {
+            article: 'Artigos de Ouro',
+            price: '15 €',
+            tax: '-'
+          },
+          {
+            article: 'Playstation 4/5',
+            price: '45 €',
+            tax: '23% da fatura'
+          }
+        ].map((row, index) => (
+          <tr key={index} className="border-b hover:bg-gray-50">
+            <td className="p-4 font-semibold">{row.article}</td>
+            <td className="p-4 text-flyfast-blue font-bold">{row.price}</td>
+            <td className="p-4">{row.tax}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <div className="overflow-x-auto">
+    <h3 className="text-xl font-bold mb-4 text-center">👕 Artigos por Peso (12.99€/kg)</h3>
+    <table className="w-full">
+      <thead>
+        <tr className="bg-gray-100">
+          <th className="p-4 text-left">Artigo</th>
+          <th className="p-4 text-left">Taxa de Fatura (%)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {[
+          { article: 'Roupas', tax: '23% da fatura' },
+          { article: 'Calçados', tax: '23% da fatura' },
+          { article: 'Cosméticos', tax: '35% da fatura' },
+          { article: 'TV\'s', tax: '23% da fatura' },
+          { article: 'Eletrodomésticos', tax: '23% da fatura' },
+          { article: 'Máquinas Pesadas', tax: '23% da fatura' }
+        ].map((row, index) => (
+          <tr key={index} className="border-b hover:bg-gray-50">
+            <td className="p-4 font-semibold">{row.article}</td>
+            <td className="p-4">{row.tax}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <div className="mt-8 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded">
+    <h4 className="font-bold text-lg mb-2">⚠️ AVISO IMPORTANTE:</h4>
+    <p className="text-gray-700">
+      Todos os artigos de grande porte devem ser consultados com base na sua medida e peso.
+    </p>
+  </div>
+
+  <div className="mt-6 text-center">
+    <p className="text-gray-600 mb-4">
+      Para consultas específicas ou artigos não listados, entre em contacto:
+    </p>
+    <p className="text-xl font-bold text-flyfast-blue">
+      📞 +244 948 787 653
+    </p>
+    <p className="text-gray-600 mt-2">
+      🌐 flyfast.0
+    </p>
+  </div>
+</div>
 
         {/* FAQ */}
         <div className="max-w-4xl mx-auto">
@@ -232,10 +374,6 @@ const Routes = () => {
               {
                 question: 'Como funciona o processo de entrega?',
                 answer: 'Pode escolher entre entrega em mãos ou recolha num dos nossos centros.'
-              },
-              {
-                question: 'E se meu envio atrasar?',
-                answer: 'Garantimos reembolso parcial por atrasos superiores a 48h em relação ao previsto.'
               }
             ].map((faq, index) => (
               <div key={index} className="card">

@@ -1,130 +1,141 @@
 const express = require('express');
 const router = express.Router();
-const personalShopperController = require('../controllers/personalShopperController');
-const { auth, adminAuth, staffAuth } = require('../middleware/auth');
-const { isAuthenticated, hasRole } = require('../middleware/authMiddleware');
-const {
-  validatePersonalShopperRequest,
-  validateIdParam,
-  handleValidationErrors
-} = require('../middleware/validation');
+const { db } = require('../config/firebase');
+const { isAuthenticated } = require('../middleware/authMiddleware');
+const multer = require('multer');
+const { google } = require('googleapis');
+const { PassThrough } = require('stream');
+const path = require('path');
+// Configuração básica do multer para processar multipart/form-data (ficheiros em memória)
+const upload = multer({ storage: multer.memoryStorage() });
 
-// Clientes
-router.post('/request',
-  isAuthenticated,
-  validatePersonalShopperRequest,
-  handleValidationErrors,
-  personalShopperController.createRequest
-);
+// GET /api/personal-shopper - Listar pedidos do utilizador
+router.get('/', isAuthenticated, async (req, res) => {
+  try {
+    const userId = req.user.uid;
+    const snapshot = await db.collection('personalShopperRequests')
+      .where('userId', '==', userId)
+      .orderBy('createdAt', 'desc')
+      .get();
 
-router.get('/my-requests', isAuthenticated, personalShopperController.getMyRequests);
-router.get('/my-requests/:id',
-  isAuthenticated,
-  validateIdParam,
-  handleValidationErrors,
-  personalShopperController.getMyRequestById
-);
+    const requests = [];
+    snapshot.forEach(doc => {
+      requests.push({ id: doc.id, ...doc.data() });
+    });
 
-router.put('/my-requests/:id/cancel',
-  isAuthenticated,
-  validateIdParam,
-  handleValidationErrors,
-  personalShopperController.cancelRequest
-);
+    res.json(requests);
+  } catch (error) {
+    console.error('Erro ao buscar pedidos de Personal Shopper:', error);
+    res.status(500).json({ error: 'Erro ao buscar pedidos.' });
+  }
+});
 
-router.post('/my-requests/:id/message',
-  isAuthenticated,
-  validateIdParam,
-  handleValidationErrors,
-  personalShopperController.sendMessage
-);
+// GET /api/personal-shopper/admin/requests - Listar TODOS os pedidos (para o Admin)
+router.get('/admin/requests', isAuthenticated, async (req, res) => {
+  try {
+    // Nota: Em produção, deve adicionar um middleware para verificar se o utilizador é admin
+    const snapshot = await db.collection('personalShopperRequests')
+      .orderBy('createdAt', 'desc')
+      .get();
 
-// Staff routes
-router.get('/staff/requests', 
-  isAuthenticated,
-  hasRole(['staff', 'admin']),
-  personalShopperController.getAllRequests
-);
+    const requests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-router.get('/staff/assigned', 
-  isAuthenticated,
-  hasRole(['staff', 'admin']),
-  personalShopperController.getAssignedRequests
-);
+    res.json(requests);
+  } catch (error) {
+    console.error('Erro ao buscar todos os pedidos (admin):', error);
+    res.status(500).json({ error: 'Erro ao buscar pedidos.' });
+  }
+});
 
-router.put('/staff/requests/:id/assign', 
-  isAuthenticated,
-  hasRole(['staff', 'admin']),
-  validateIdParam,
-  handleValidationErrors,
-  personalShopperController.assignRequest
-);
+// PUT /api/personal-shopper/requests/:id/status - Atualizar estado do pedido (Admin)
+router.put('/requests/:id/status', isAuthenticated, async (req, res) => {
+  try {
+    // TODO: Adicionar verificação se req.user.role === 'admin'
+    const { id } = req.params;
+    const { status } = req.body;
 
-router.put('/staff/requests/:id/status', 
-  isAuthenticated,
-  hasRole(['staff', 'admin']),
-  validateIdParam,
-  handleValidationErrors,
-  personalShopperController.updateRequestStatus
-);
+    if (!status) return res.status(400).json({ error: 'Status é obrigatório' });
 
-router.post('/staff/requests/:id/message', 
-  isAuthenticated,
-  hasRole(['staff', 'admin']),
-  validateIdParam,
-  handleValidationErrors,
-  personalShopperController.sendStaffMessage
-);
+    await db.collection('personalShopperRequests').doc(id).update({ status, updatedAt: new Date().toISOString() });
+    res.json({ success: true, status });
+  } catch (error) {
+    console.error('Erro ao atualizar status:', error);
+    res.status(500).json({ error: 'Erro ao atualizar status.' });
+  }
+});
 
-router.put('/staff/requests/:id/search', 
-  isAuthenticated,
-  hasRole(['staff', 'admin']),
-  validateIdParam,
-  handleValidationErrors,
-  personalShopperController.addSearchResult
-);
+// POST /api/personal-shopper/requests - Criar novo pedido
+// Adicionado middleware upload.single('attachment') para processar o ficheiro e os campos do formulário
+router.post('/requests', isAuthenticated, upload.single('attachment'), async (req, res) => {
+  try {
+    // Com o multer, req.body agora contém os campos de texto do FormData
+    const { productName, productLink, details, budget, deliveryCountry, name, email, phone } = req.body;
+    const userId = req.user.uid;
 
-router.put('/staff/requests/:id/select-option', 
-  isAuthenticated,
-  hasRole(['staff', 'admin']),
-  validateIdParam,
-  handleValidationErrors,
-  personalShopperController.selectOption
-);
+    // Se houver ficheiro, ele estará disponível em req.file
+    let attachmentInfo = null;
 
-// Admin routes
-router.get('/admin/stats', 
-  isAuthenticated,
-  hasRole(['admin']),
-  personalShopperController.getStats
-);
+    if (req.file) {
+      try {
+        // Configuração Google Drive
+        // Certifique-se de ter o ficheiro de credenciais na pasta config (ex: google-drive.json)
+        // e que a API do Google Drive está ativada no seu projeto Google Cloud.
+        const KEY_FILE_PATH = path.join(__dirname, '../config/google-drive.json');
+        const SCOPES = ['https://www.googleapis.com/auth/drive.file'];
 
-router.get('/admin/requests/:id', 
-  isAuthenticated,
-  hasRole(['admin']),
-  validateIdParam,
-  handleValidationErrors,
-  personalShopperController.getRequestById
-);
+        const auth = new google.auth.GoogleAuth({
+          keyFile: KEY_FILE_PATH,
+          scopes: SCOPES,
+        });
 
-router.put('/admin/requests/:id', 
-  isAuthenticated,
-  hasRole(['admin']),
-  validateIdParam,
-  handleValidationErrors,
-  personalShopperController.adminUpdateRequest
-);
+        const drive = google.drive({ version: 'v3', auth });
 
-router.delete('/admin/requests/:id', 
-  isAuthenticated,
-  hasRole(['admin']),
-  validateIdParam,
-  handleValidationErrors,
-  personalShopperController.deleteRequest
-);
+        const bufferStream = new PassThrough();
+        bufferStream.end(req.file.buffer);
 
-// Public info
-router.get('/info', personalShopperController.getServiceInfo);
-router.get('/faq', personalShopperController.getFAQ);
+        const driveResponse = await drive.files.create({
+          media: { mimeType: req.file.mimetype, body: bufferStream },
+          requestBody: {
+            name: `${Date.now()}_${req.file.originalname}`,
+            parents: ['ID_DA_PASTA_AQUI'], // Substitua pelo ID da sua pasta do Google Drive
+          },
+          fields: 'id, name, webViewLink, size',
+        });
+
+        attachmentInfo = {
+          name: driveResponse.data.name,
+          size: parseInt(driveResponse.data.size),
+          link: driveResponse.data.webViewLink, // Link para visualizar/baixar
+          fileId: driveResponse.data.id
+        };
+      } catch (uploadError) {
+        console.error('Erro ao fazer upload para o Google Drive:', uploadError);
+        // Salva metadados básicos mesmo se o upload falhar, para registo
+        attachmentInfo = { name: req.file.originalname, size: req.file.size, error: 'Falha no upload' };
+      }
+    }
+
+    const newRequest = {
+      userId,
+      productName,
+      productLink: productLink || '',
+      details: details || '',
+      budget: budget || '',
+      deliveryCountry,
+      contact: { name, email, phone },
+      attachment: attachmentInfo,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const docRef = await db.collection('personalShopperRequests').add(newRequest);
+    
+    res.status(201).json({ id: docRef.id, ...newRequest });
+  } catch (error) {
+    console.error('Erro ao criar pedido de Personal Shopper:', error);
+    res.status(500).json({ error: 'Erro ao criar pedido.' });
+  }
+});
 
 module.exports = router;

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { FaFacebook, FaInstagram, FaWhatsapp } from 'react-icons/fa';
 import FlyfastLogo from '../assets/flyfast-logo.jpg'; // Assumindo que o seu logo está aqui
 
 const Footer = () => {
@@ -21,6 +22,14 @@ const Footer = () => {
             <p className="text-flyfast-yellow font-bold text-lg">
               VOE CONNOSCO!
             </p>
+            <div className="flex space-x-4 mt-6">
+              <a href="https://www.instagram.com/flyfast.0/" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-flyfast-yellow transition" aria-label="Instagram">
+                <FaInstagram size={24} />
+              </a>
+              <a href="https://wa.me/244948787653" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-flyfast-yellow transition" aria-label="WhatsApp">
+                <FaWhatsapp size={24} />
+              </a>
+            </div>
           </div>
 
           {/* Quick Links */}
@@ -61,7 +70,11 @@ const Footer = () => {
             <ul className="space-y-3">
               <li className="flex items-center space-x-2">
                 <span>📞</span>
-                <span>Luanda: +244 948 787 653</span>
+                <span>Angola: +244 943 427 296</span>
+              </li>
+              <li className="flex items-center space-x-2">
+                <span>📞</span>
+                <span>Portugal: +244 948 787 653</span>
               </li>
               <li className="flex items-center space-x-2">
                 <span>📧</span>
@@ -81,8 +94,9 @@ const Footer = () => {
               <div>
                 <h4 className="font-bold">🇦🇴 Angola</h4>
                 <p className="text-gray-300">
-                  Rua da Missão, 123<br />
-                  Luanda, Angola
+
+                  Rua direita do colegio São Vicente de Paulo<br />
+                  Luanda Sul, Viana, Angola
                 </p>
               </div>
               <div>
@@ -99,7 +113,7 @@ const Footer = () => {
         <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
           <p>© 2025 FLYFAST. Todos os direitos reservados.</p>
           <p className="mt-2">
-            Desenvolvido com ❤️ para conectar Angola e Portugal
+            Desenvolvido com amor para conectar Angola e Portugal
           </p>
         </div>
       </div>

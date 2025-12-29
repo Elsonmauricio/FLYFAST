@@ -6,4 +6,4 @@ build
 
 # Ficheiros de ambiente e cache
 .env
-.cache
+.cache 

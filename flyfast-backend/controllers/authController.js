@@ -493,7 +493,7 @@ class AuthController {
     try {
       const { role } = req.body;
 
-      const validRoles = ['user', 'staff', 'admin'];
+      const validRoles = ['customer', 'admin'];
       if (!validRoles.includes(role)) {
         return res.status(400).json({
           error: 'Role inválida'
