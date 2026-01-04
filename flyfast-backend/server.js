@@ -134,14 +134,18 @@ app.use((err, req, res, next) => {
 // Iniciar servidor
 const PORT = process.env.PORT || 5000;
 
-const server = app.listen(PORT, () => {
-  console.log(`🚀 Servidor FLYFAST (Firebase) rodando na porta ${PORT}`);
-  console.log(`📁 Ambiente: ${process.env.NODE_ENV}`);
-  console.log(`🔗 Frontend: ${process.env.FRONTEND_URL}`);
-  console.log(`🗄️  Database: Firebase Firestore`);
-  console.log(`🔐 Auth: Firebase Authentication`);
-  console.log(`💾 Storage: Firebase Storage`);
-});
+let server;
+// Apenas inicia o servidor se este ficheiro for executado diretamente (Localmente)
+if (require.main === module) {
+  server = app.listen(PORT, () => {
+    console.log(`🚀 Servidor FLYFAST (Firebase) rodando na porta ${PORT}`);
+    console.log(`📁 Ambiente: ${process.env.NODE_ENV}`);
+    console.log(`🔗 Frontend: ${process.env.FRONTEND_URL}`);
+    console.log(`🗄️  Database: Firebase Firestore`);
+    console.log(`🔐 Auth: Firebase Authentication`);
+    console.log(`💾 Storage: Firebase Storage`);
+  });
+}
 
 // Graceful shutdown
 process.on('SIGTERM', () => {

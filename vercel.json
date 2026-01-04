@@ -17,7 +17,12 @@
       "dest": "/flyfast-backend/index.js"
     },
     {
-      "handle": "filesystem"
+      "src": "/static/(.*)",
+      "dest": "/flyfast-frontend/static/$1"
+    },
+    {
+      "src": "/(.*)\\.(png|jpg|jpeg|gif|svg|ico|json|css|js|txt|xml)",
+      "dest": "/flyfast-frontend/$1.$2"
     },
     {
       "src": "/(.*)",
