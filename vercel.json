@@ -21,7 +21,7 @@
       "dest": "/flyfast-frontend/static/$1"
     },
     {
-      "src": "/(.*)\\.(png|jpg|jpeg|gif|svg|ico|json|css|js|txt|xml)",
+      "src": "/(.*)\\.(png|jpg|jpeg|gif|svg|ico|json|css|js|jsx|txt|xml)",
       "dest": "/flyfast-frontend/$1.$2"
     },
     {
