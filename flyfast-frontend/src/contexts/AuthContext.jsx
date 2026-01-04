@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onIdTokenChanged } from 'firebase/auth';
 import { auth, db } from '../lib/firebase';
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 
@@ -15,10 +15,11 @@ export const AuthProvider = ({ children }) => {
 
   // Ouve as mudanças no estado de autenticação do Firebase
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    const unsubscribe = onIdTokenChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         // Utilizador está logado
-        const idTokenResult = await firebaseUser.getIdTokenResult();
+        // Força a obtenção do token se necessário para garantir que não está expirado
+        const idTokenResult = await firebaseUser.getIdTokenResult(false);
         const token = idTokenResult.token;
 
         // Buscar dados adicionais do utilizador no Firestore
@@ -74,6 +75,9 @@ export const AuthProvider = ({ children }) => {
           await currentUser.getIdToken(true);
         }
       }
+    }, (error) => {
+      // Captura erros de rede ou permissão silenciosamente para não bloquear a app
+      console.warn("Monitorização de role em tempo real pausada (possível falha de rede):", error.code);
     });
 
     return () => unsubscribe();

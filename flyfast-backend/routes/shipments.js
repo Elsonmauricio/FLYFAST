@@ -4,12 +4,16 @@ const shipmentController = require('../controllers/shipmentController');
 const { isAuthenticated, hasRole } = require('../middleware/authMiddleware');
 const { trackingLimiter, globalLimiter } = require('../middleware/rateLimit');
 const { db } = require('../config/firebase');
-const { sendShipmentConfirmation } = require('../services/emailService');
-const { sendWhatsAppMessage } = require('../services/whatsappService');
+// Importamos o objeto inteiro para evitar erros de destructuring se o módulo falhar
+const emailService = require('../services/emailService');
+const whatsappService = require('../services/whatsappService');
 
 // Rota pública para rastrear um envio
 // (Aplica um rate limit para evitar abusos)
 router.get('/track/:trackingCode', trackingLimiter, shipmentController.trackShipment);
+
+// Rota pública para subscrever atualizações de um envio
+router.post('/track/:trackingCode/subscribe', trackingLimiter, shipmentController.subscribeToUpdates);
 
 // --- Rotas Protegidas para Utilizadores Autenticados ---
 
@@ -65,7 +69,13 @@ router.post(
           items: items || [],
           status: 'Pendente',
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
+          history: [{
+            status: 'Pendente',
+            location: from || routeData.from,
+            date: new Date().toISOString(),
+            description: 'Reserva criada'
+          }]
         };
 
         // D. Executar as escritas (Criar Envio + Atualizar Rota)
@@ -79,7 +89,9 @@ router.post(
 
       // 3. Enviar Notificações (Assíncrono)
       // A. Email
-      sendShipmentConfirmation(req.user.email, shipmentResult);
+      if (emailService && typeof emailService.sendShipmentConfirmation === 'function') {
+        emailService.sendShipmentConfirmation(req.user.email, shipmentResult).catch(err => console.error("Erro envio email:", err));
+      }
 
       // B. Notificação Interna (Firestore)
       db.collection('notifications').add({
@@ -170,7 +182,9 @@ router.post(
         if (userDoc.exists) {
           const userData = userDoc.data();
           if (userData.phone) {
-            await sendWhatsAppMessage(userData.phone, `⚠️ O seu envio #${result.id} foi cancelado. Por favor, contacte o suporte para mais detalhes.`);
+            if (whatsappService && typeof whatsappService.sendWhatsAppMessage === 'function') {
+               await whatsappService.sendWhatsAppMessage(userData.phone, `⚠️ O seu envio #${result.id} foi cancelado. Por favor, contacte o suporte para mais detalhes.`);
+            }
           }
         }
       } catch (err) { console.error('Erro ao enviar WhatsApp:', err); }
@@ -214,7 +228,9 @@ router.post(
       }
       
       // Envia o email
-      await sendShipmentConfirmation(targetEmail, shipmentData);
+      if (emailService && typeof emailService.sendShipmentConfirmation === 'function') {
+        await emailService.sendShipmentConfirmation(targetEmail, shipmentData);
+      }
       
       res.json({ message: 'Email reenviado com sucesso.' });
     } catch (error) {

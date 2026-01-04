@@ -19,6 +19,7 @@ const notificationRoutes = require('./routes/notifications');
 const adminRoutes = require('./routes/admin');
 const userRoutes = require('./routes/users');
 const scheduleRoutes = require('./routes/schedules');
+const trackingRoutes = require('./routes/tracking');
 // const shopifyRoutes = require('./routes/shopify');
 
 // Inicializar app
@@ -63,6 +64,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/schedules', scheduleRoutes);
+app.use('/api/tracking', trackingRoutes);
 // app.use('/api/shopify', shopifyRoutes);
 
 // Rota de saúde

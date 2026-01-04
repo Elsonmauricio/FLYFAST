@@ -1,16 +1,11 @@
 import React, { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useCart } from '../contexts/CartContext';
-import { FaBars, FaTimes, FaShoppingCart, FaUser, FaShieldAlt } from 'react-icons/fa';
+import { FaBars, FaTimes, FaUser, FaShieldAlt } from 'react-icons/fa';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { authState } = useAuth();
-  const { checkoutState } = useCart();
-  
-  // Calcular total de itens no carrinho da Shopify
-  const cartItemCount = checkoutState.checkout?.lineItems?.reduce((total, item) => total + item.quantity, 0) || 0;
 
   const toggleMenu = useCallback(() => {
     setIsMenuOpen(prev => !prev);
@@ -41,15 +36,6 @@ const Header = () => {
 
         {/* Icons & Auth */}
         <div className="hidden md:flex items-center space-x-6">
-          {/* Cart */}
-          <Link to="/cart" className="relative text-gray-200 hover:text-white">
-            <FaShoppingCart className="text-xl" />
-            {cartItemCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-flyfast-yellow text-flyfast-blue text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                {cartItemCount}
-              </span>
-            )}
-          </Link>
 
           {/* Auth Buttons - A Lógica Principal */}
           {authState.isAuthenticated ? (
@@ -89,9 +75,6 @@ const Header = () => {
                 Painel Admin
               </Link>
             )}
-            <Link to="/cart" className="text-gray-600 hover:text-flyfast-blue flex items-center" onClick={toggleMenu}>
-              Carrinho ({cartItemCount})
-            </Link>
             <div className="border-t pt-4 flex flex-col space-y-3">
               {authState.isAuthenticated ? (
                 <Link to="/account" className="text-flyfast-blue font-semibold" onClick={toggleMenu}>Minha Conta</Link>

@@ -14,41 +14,45 @@ import Register from './pages/Register';
 import Admin from './pages/Admin';
 import { CartProvider } from './contexts/CartContext';
 import { AuthProvider } from './contexts/AuthContext'; // Importar o AuthProvider
+import { ToastProvider } from './contexts/ToastContext'; // Importar o ToastProvider
 import ProtectedRoute from './components/ProtectedRoute'; // Importar o ProtectedRoute
 
 function App() {
   return (
     <AuthProvider>
-      <CartProvider>
-        <Router>
-          <div className="flex flex-col min-h-screen">
-            <Header />
-            <main className="flex-grow">
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/tracking" element={<Tracking />} />
-                <Route path="/shop" element={<Shop />} />
-                <Route path="/personal-shopper" element={<PersonalShopper />} />
-                <Route path="/routes" element={<RoutesPage />} />
-                <Route path="/contact" element={<Contact />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                
-                {/* Rota Protegida */}
-                <Route 
-                  path="/account" 
-                  element={<ProtectedRoute><Account /></ProtectedRoute>} 
-                />
-                <Route 
-                  path="/admin" 
-                  element={<ProtectedRoute><Admin /></ProtectedRoute>} 
-                />
-              </Routes>
-            </main>
-            <Footer />
-          </div>
-        </Router>
-      </CartProvider>
+      <ToastProvider>
+        <CartProvider>
+          <Router>
+            <div className="flex flex-col min-h-screen">
+              <Header />
+              <main className="flex-grow">
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/tracking" element={<Tracking />} />
+                  <Route path="/tracking/:id" element={<Tracking />} />
+                  <Route path="/shop" element={<Shop />} />
+                  <Route path="/personal-shopper" element={<PersonalShopper />} />
+                  <Route path="/routes" element={<RoutesPage />} />
+                  <Route path="/contact" element={<Contact />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  
+                  {/* Rota Protegida */}
+                  <Route 
+                    path="/account" 
+                    element={<ProtectedRoute><Account /></ProtectedRoute>} 
+                  />
+                  <Route 
+                    path="/admin" 
+                    element={<ProtectedRoute><Admin /></ProtectedRoute>} 
+                  />
+                </Routes>
+              </main>
+              <Footer />
+            </div>
+          </Router>
+        </CartProvider>
+      </ToastProvider>
     </AuthProvider>
   );
 }

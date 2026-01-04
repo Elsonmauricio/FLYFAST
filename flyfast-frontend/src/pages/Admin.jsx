@@ -855,9 +855,9 @@ const AdminContent = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <h4 className="font-bold text-gray-700 text-sm uppercase">Cliente</h4>
-                                    <p className="font-semibold">{selectedRequest.contact?.name}</p>
-                                    <p className="text-sm text-gray-600">{selectedRequest.contact?.email}</p>
-                                    <p className="text-sm text-gray-600">{selectedRequest.contact?.phone}</p>
+                                    <p className="font-semibold">{selectedRequest.contact?.name || selectedRequest.userName || 'Nome N/D'}</p>
+                                    <p className="text-sm text-gray-600">{selectedRequest.contact?.email || selectedRequest.userEmail || 'Email N/D'}</p>
+                                    <p className="text-sm text-gray-600">{selectedRequest.contact?.phone || selectedRequest.userPhone || 'Telefone N/D'}</p>
                                 </div>
                                 <div>
                                     <h4 className="font-bold text-gray-700 text-sm uppercase">Entrega</h4>
@@ -889,11 +889,17 @@ const AdminContent = () => {
                                     <h4 className="font-bold text-gray-700 text-sm uppercase">Anexo</h4>
                                     {selectedRequest.attachment ? (
                                         <div>
-                                            <p>📎 {selectedRequest.attachment.name}</p>
                                             {selectedRequest.attachment.link && (
-                                                <a href={selectedRequest.attachment.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium mt-1 inline-block">
-                                                    Ver / Baixar Arquivo ↗
-                                                </a>
+                                                <div className="mb-2">
+                                                    <img 
+                                                        src={selectedRequest.attachment.link}
+                                                        alt="Anexo do pedido" 
+                                                        className="max-w-full h-auto max-h-64 rounded border border-gray-300 object-contain"
+                                                    />
+                                                    <a href={selectedRequest.attachment.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium mt-1 inline-block text-sm">
+                                                        📎 Abrir Original ({selectedRequest.attachment.name || 'Ficheiro'}) ↗
+                                                    </a>
+                                                </div>
                                             )}
                                         </div>
                                     ) : (
@@ -939,8 +945,8 @@ const AdminContent = () => {
                     <tr key={request.id} className="hover:bg-gray-50">
                         <td className="p-4 whitespace-nowrap text-sm">{new Date(request.createdAt).toLocaleDateString('pt-PT')}</td>
                         <td className="p-4 whitespace-nowrap">
-                            <div className="text-sm font-bold text-gray-900">{request.contact?.name}</div>
-                            <div className="text-xs text-gray-500">{request.contact?.email}</div>
+                            <div className="text-sm font-bold text-gray-900">{request.contact?.name || request.userName || 'N/D'}</div>
+                            <div className="text-xs text-gray-500">{request.contact?.email || request.userEmail || 'N/D'}</div>
                         </td>
                         <td className="p-4 text-sm max-w-xs truncate" title={request.productName}>
                             {request.productName}

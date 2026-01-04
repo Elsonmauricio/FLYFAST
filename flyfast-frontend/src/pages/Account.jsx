@@ -2,9 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLogout } from '../hooks/useAuthHooks';
+import BookingModal from '../components/BookingModal';
 import { useShipments, useOrders } from '../hooks/useAccountData';
 import { useNotifications } from '../hooks/useNotifications';
-import { FaSpinner, FaExclamationCircle, FaUserShield, FaCopy } from 'react-icons/fa';
+import { FaSpinner, FaExclamationCircle, FaUserShield, FaCopy, FaLock, FaBell, FaSave } from 'react-icons/fa';
+import { auth } from '../lib/firebase';
+import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 
 const Account = () => {
   const [activeTab, setActiveTab] = useState('profile');
@@ -25,6 +28,27 @@ const Account = () => {
   const [routes, setRoutes] = useState([]);
   const [isLoadingRoutes, setIsLoadingRoutes] = useState(false);
 
+  // Estados para o Modal de Reserva
+  const [selectedRoute, setSelectedRoute] = useState(null);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [isBookingLoading, setIsBookingLoading] = useState(false);
+
+  // Estados para Edição de Perfil e Definições
+  const [profileForm, setProfileForm] = useState({
+    name: userData.name || '',
+    phone: userData.phone || '',
+  });
+  const [preferences, setPreferences] = useState(userData.preferences || {
+    emailUpdates: true,
+    whatsappUpdates: true
+  });
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [isSaving, setIsSaving] = useState(false);
+
   const menuItems = [
     { id: 'profile', label: 'Perfil', icon: '👤' },
     ...(userData.role !== 'admin' ? [
@@ -37,6 +61,14 @@ const Account = () => {
     { id: 'notifications', label: 'Notificações', icon: '🔔' },
     { id: 'settings', label: 'Definições', icon: '⚙️' }
   ];
+
+  // Atualiza o formulário quando os dados do utilizador carregam
+  useEffect(() => {
+    if (userData) {
+      setProfileForm({ name: userData.name || '', phone: userData.phone || '' });
+      if (userData.preferences) setPreferences(userData.preferences);
+    }
+  }, [userData]);
 
   useEffect(() => {
     if (activeTab === 'notifications') {
@@ -91,6 +123,117 @@ const Account = () => {
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     alert(`Código de rastreio ${text} copiado!`);
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await fetch('/api/notifications/read-all', {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${authState.token}` }
+      });
+      fetchNotifications(); // Recarrega a lista para atualizar o UI
+    } catch (err) {
+      console.error('Erro ao marcar notificações como lidas', err);
+    }
+  };
+
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      const response = await fetch('/api/users/me', {
+        method: 'PUT',
+        headers: { 
+          'Authorization': `Bearer ${authState.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(profileForm)
+      });
+
+      if (response.ok) {
+        alert('Perfil atualizado com sucesso!');
+      } else {
+        alert('Erro ao atualizar perfil.');
+      }
+    } catch (error) {
+      alert('Erro de conexão.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleUpdatePreferences = async () => {
+    setIsSaving(true);
+    try {
+      const response = await fetch('/api/users/me', {
+        method: 'PUT',
+        headers: { 
+          'Authorization': `Bearer ${authState.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ preferences })
+      });
+
+      if (response.ok) {
+        alert('Preferências guardadas com sucesso!');
+      }
+    } catch (error) {
+      alert('Erro ao guardar preferências.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      return alert('As novas palavras-passe não coincidem.');
+    }
+
+    setIsSaving(true);
+    try {
+      const user = auth.currentUser;
+      const credential = EmailAuthProvider.credential(user.email, passwordForm.currentPassword);
+      await reauthenticateWithCredential(user, credential);
+      await updatePassword(user, passwordForm.newPassword);
+      alert('Palavra-passe alterada com sucesso!');
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (error) {
+      alert('Erro ao alterar palavra-passe: ' + error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleOpenBooking = (route) => {
+    setSelectedRoute(route);
+    setIsBookingModalOpen(true);
+  };
+
+  const handleBookingSubmit = async (bookingData) => {
+    setIsBookingLoading(true);
+    try {
+      const response = await fetch('/api/shipments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authState.token}`
+        },
+        body: JSON.stringify(bookingData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao criar reserva');
+      }
+
+      alert('Reserva efetuada com sucesso! Verifique o seu email.');
+      setIsBookingModalOpen(false);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setIsBookingLoading(false);
+    }
   };
 
   return (
@@ -279,9 +422,9 @@ const Account = () => {
                             {/* ... (restante da estrutura do card) ... */}
                           </div>
                           <div className="mt-4 flex space-x-4">
-                            <button className="text-flyfast-blue font-semibold hover:text-blue-900">
+                            <Link to={`/tracking/${shipment.id}`} className="text-flyfast-blue font-semibold hover:text-blue-900">
                               Rastrear
-                            </button>
+                            </Link>
                             {/* ... */}
                           </div>
                         </div>
@@ -448,7 +591,10 @@ const Account = () => {
                               <p className="text-flyfast-blue font-bold text-xl">{route.price}</p>
                               <p className="text-xs text-gray-500">por Kg</p>
                            </div>
-                           <button className="btn-primary py-2 px-4 text-sm">
+                           <button 
+                             onClick={() => handleOpenBooking(route)}
+                             className="btn-primary py-2 px-4 text-sm"
+                           >
                              Reservar
                            </button>
                         </div>
@@ -462,9 +608,19 @@ const Account = () => {
             {/* Notifications Tab */}
             {activeTab === 'notifications' && (
               <div>
-                <h2 className="text-2xl font-bold text-flyfast-blue mb-6">
-                  Notificações
-                </h2>
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-flyfast-blue">
+                    Notificações
+                  </h2>
+                  {notifications.some(n => !n.read) && (
+                    <button 
+                      onClick={handleMarkAllAsRead}
+                      className="text-sm text-flyfast-blue hover:underline font-medium"
+                    >
+                      Marcar todas como lidas
+                    </button>
+                  )}
+                </div>
                 {isLoadingNotifications && (
                   <div className="flex justify-center items-center p-16">
                     <FaSpinner className="animate-spin text-4xl text-flyfast-blue" />
@@ -509,9 +665,104 @@ const Account = () => {
                 )}
               </div>
             )}
+
+            {/* Settings Tab */}
+            {activeTab === 'settings' && (
+              <div className="space-y-8">
+                {/* Security Section */}
+                <div className="card">
+                  <h2 className="text-xl font-bold text-flyfast-blue mb-6 flex items-center gap-2">
+                    <FaLock /> Segurança
+                  </h2>
+                  <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
+                    <div>
+                      <label className="label">Palavra-passe Atual</label>
+                      <input 
+                        type="password" 
+                        className="input-field" 
+                        value={passwordForm.currentPassword}
+                        onChange={e => setPasswordForm({...passwordForm, currentPassword: e.target.value})}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="label">Nova Palavra-passe</label>
+                      <input 
+                        type="password" 
+                        className="input-field" 
+                        value={passwordForm.newPassword}
+                        onChange={e => setPasswordForm({...passwordForm, newPassword: e.target.value})}
+                        required
+                        minLength={6}
+                      />
+                    </div>
+                    <div>
+                      <label className="label">Confirmar Nova Palavra-passe</label>
+                      <input 
+                        type="password" 
+                        className="input-field" 
+                        value={passwordForm.confirmPassword}
+                        onChange={e => setPasswordForm({...passwordForm, confirmPassword: e.target.value})}
+                        required
+                      />
+                    </div>
+                    <button type="submit" disabled={isSaving} className="btn-primary w-full">
+                      {isSaving ? 'A alterar...' : 'Alterar Palavra-passe'}
+                    </button>
+                  </form>
+                </div>
+
+                {/* Preferences Section */}
+                <div className="card">
+                  <h2 className="text-xl font-bold text-flyfast-blue mb-6 flex items-center gap-2">
+                    <FaBell /> Preferências de Notificação
+                  </h2>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div>
+                        <p className="font-bold text-gray-800">Notificações por Email</p>
+                        <p className="text-sm text-gray-600">Receber atualizações sobre encomendas e promoções.</p>
+                      </div>
+                      <input 
+                        type="checkbox" 
+                        className="w-6 h-6 text-flyfast-blue rounded focus:ring-flyfast-blue"
+                        checked={preferences.emailUpdates}
+                        onChange={e => setPreferences({...preferences, emailUpdates: e.target.checked})}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div>
+                        <p className="font-bold text-gray-800">Notificações por WhatsApp</p>
+                        <p className="text-sm text-gray-600">Receber alertas urgentes e atualizações de estado.</p>
+                      </div>
+                      <input 
+                        type="checkbox" 
+                        className="w-6 h-6 text-flyfast-blue rounded focus:ring-flyfast-blue"
+                        checked={preferences.whatsappUpdates}
+                        onChange={e => setPreferences({...preferences, whatsappUpdates: e.target.checked})}
+                      />
+                    </div>
+                    <div className="pt-4">
+                      <button onClick={handleUpdatePreferences} disabled={isSaving} className="btn-secondary">
+                        {isSaving ? 'A guardar...' : 'Guardar Preferências'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Modal de Reserva */}
+      <BookingModal 
+        isOpen={isBookingModalOpen}
+        onClose={() => setIsBookingModalOpen(false)}
+        route={selectedRoute}
+        onSubmit={handleBookingSubmit}
+        isLoading={isBookingLoading}
+      />
     </div>
   );
 };

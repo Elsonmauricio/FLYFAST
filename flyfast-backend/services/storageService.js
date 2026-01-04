@@ -1,239 +1,45 @@
-const { storage } = require('../config/firebase');
-const path = require('path');
-const { v4: uuidv4 } = require('uuid');
+const admin = require('firebase-admin');
 
-class StorageService {
-  // Upload de arquivo
-  async uploadFile(file, folder = 'uploads', options = {}) {
-    try {
-      const {
-        public: isPublic = false,
-        maxSizeMB = 10,
-        allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf']
-      } = options;
-
-      // Validar tipo de arquivo
-      if (!allowedTypes.includes(file.mimetype)) {
-        throw new Error(`Tipo de arquivo não permitido: ${file.mimetype}`);
-      }
-
-      // Validar tamanho
-      if (file.size > maxSizeMB * 1024 * 1024) {
-        throw new Error(`Arquivo muito grande. Máximo: ${maxSizeMB}MB`);
-      }
-
-      // Gerar nome único
-      const fileExtension = path.extname(file.originalname);
-      const fileName = `${folder}/${uuidv4()}${fileExtension}`;
-      
-      // Criar buffer do arquivo
-      const buffer = file.buffer;
-      
-      // Upload para Firebase Storage
-      const fileRef = storage.file(fileName);
-      
-      await fileRef.save(buffer, {
-        metadata: {
-          contentType: file.mimetype,
-          metadata: {
-            originalName: file.originalname,
-            size: file.size,
-            uploadedAt: new Date().toISOString()
-          }
-        }
-      });
-
-      // Tornar público se necessário
-      if (isPublic) {
-        await fileRef.makePublic();
-      }
-
-      // Obter URL pública
-      const [url] = await fileRef.getSignedUrl({
-        action: 'read',
-        expires: '03-01-2500' // Data longa no futuro
-      });
-
-      return {
-        success: true,
-        fileName,
-        url,
-        publicUrl: isPublic ? fileRef.publicUrl() : null,
-        metadata: {
-          originalName: file.originalname,
-          size: file.size,
-          contentType: file.mimetype,
-          folder
-        }
-      };
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      return {
-        success: false,
-        error: error.message
-      };
+/**
+ * Faz upload de um ficheiro para o Firebase Storage (Google Cloud Storage)
+ * @param {String} requestId - O ID do pedido para organizar a pasta
+ * @param {Object} file - O objeto de ficheiro do Multer
+ */
+const uploadPersonalShopperAttachment = async (requestId, file) => {
+  try {
+    const bucket = admin.storage().bucket();
+    
+    // Verificação de segurança para garantir que o bucket está configurado
+    if (!bucket.name) {
+      console.warn('⚠️ AVISO: O nome do bucket está indefinido. Verifique o "storageBucket" no config/firebase.js');
     }
-  }
+    console.log(`📦 [Storage] A iniciar upload para o bucket: ${bucket.name}`);
 
-  // Upload múltiplos arquivos
-  async uploadMultipleFiles(files, folder = 'uploads', options = {}) {
-    try {
-      const uploadPromises = files.map(file => 
-        this.uploadFile(file, folder, options)
-      );
-      
-      const results = await Promise.all(uploadPromises);
-      
-      const successful = results.filter(r => r.success);
-      const failed = results.filter(r => !r.success);
-      
-      return {
-        success: true,
-        total: files.length,
-        uploaded: successful.length,
-        failed: failed.length,
-        files: successful,
-        errors: failed.map(f => f.error)
-      };
-    } catch (error) {
-      console.error('Error uploading multiple files:', error);
-      return {
-        success: false,
-        error: error.message
-      };
-    }
-  }
+    const extension = file.originalname.split('.').pop();
+    // Cria um caminho organizado: personal-shopper/ID_DO_PEDIDO/timestamp.ext
+    const fileName = `personal-shopper/${requestId}/${Date.now()}_${Math.floor(Math.random() * 1000)}.${extension}`;
+    const fileUpload = bucket.file(fileName);
 
-  // Deletar arquivo
-  async deleteFile(fileName) {
-    try {
-      const fileRef = storage.file(fileName);
-      await fileRef.delete();
-      
-      return {
-        success: true,
-        message: 'Arquivo deletado com sucesso'
-      };
-    } catch (error) {
-      console.error('Error deleting file:', error);
-      return {
-        success: false,
-        error: error.message
-      };
-    }
-  }
-
-  // Obter URL do arquivo
-  async getFileUrl(fileName, expiresInHours = 24) {
-    try {
-      const fileRef = storage.file(fileName);
-      
-      // Verificar se arquivo existe
-      const [exists] = await fileRef.exists();
-      if (!exists) {
-        throw new Error('Arquivo não encontrado');
-      }
-      
-      // Gerar URL assinada
-      const expires = new Date();
-      expires.setHours(expires.getHours() + expiresInHours);
-      
-      const [url] = await fileRef.getSignedUrl({
-        action: 'read',
-        expires
-      });
-      
-      return {
-        success: true,
-        url,
-        expires
-      };
-    } catch (error) {
-      console.error('Error getting file URL:', error);
-      return {
-        success: false,
-        error: error.message
-      };
-    }
-  }
-
-  // Listar arquivos em uma pasta
-  async listFiles(folder = '', options = {}) {
-    try {
-      const { maxResults = 100, prefix = folder } = options;
-      
-      const [files] = await storage.getFiles({
-        prefix,
-        maxResults
-      });
-      
-      const fileList = await Promise.all(
-        files.map(async file => {
-          const [metadata] = await file.getMetadata();
-          const [url] = await file.getSignedUrl({
-            action: 'read',
-            expires: '03-01-2500'
-          });
-          
-          return {
-            name: file.name,
-            url,
-            metadata: {
-              contentType: metadata.contentType,
-              size: metadata.size,
-              updated: metadata.updated,
-              timeCreated: metadata.timeCreated
-            }
-          };
-        })
-      );
-      
-      return {
-        success: true,
-        files: fileList,
-        total: fileList.length
-      };
-    } catch (error) {
-      console.error('Error listing files:', error);
-      return {
-        success: false,
-        error: error.message
-      };
-    }
-  }
-
-  // Upload para categorias específicas
-  async uploadUserAvatar(userId, file) {
-    return this.uploadFile(file, `users/${userId}/avatar`, {
-      public: true,
-      maxSizeMB: 5,
-      allowedTypes: ['image/jpeg', 'image/png', 'image/gif']
+    await fileUpload.save(file.buffer, {
+      metadata: {
+        contentType: file.mimetype,
+      },
+      public: true, // Torna o ficheiro acessível publicamente
     });
-  }
 
-  async uploadShipmentDocument(shipmentId, file) {
-    return this.uploadFile(file, `shipments/${shipmentId}/documents`, {
-      public: false,
-      maxSizeMB: 10,
-      allowedTypes: ['image/jpeg', 'image/png', 'application/pdf']
-    });
-  }
+    // Gera o URL público
+    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
 
-  async uploadProductImage(productId, file) {
-    return this.uploadFile(file, `products/${productId}/images`, {
-      public: true,
-      maxSizeMB: 5,
-      allowedTypes: ['image/jpeg', 'image/png', 'image/webp']
-    });
+    return { success: true, url: publicUrl, fileName: fileName };
+  } catch (error) {
+    console.error('Erro no upload para Storage:', error);
+    
+    if (error.code === 404) {
+      return { success: false, error: `O bucket '${admin.storage().bucket().name}' não existe. Vá ao Firebase Console > Storage e clique em "Get Started" para criar o bucket.` };
+    }
+    
+    return { success: false, error: error.message };
   }
+};
 
-  async uploadPersonalShopperAttachment(requestId, file) {
-    return this.uploadFile(file, `personal-shopper/${requestId}/attachments`, {
-      public: false,
-      maxSizeMB: 10,
-      allowedTypes: ['image/jpeg', 'image/png', 'application/pdf']
-    });
-  }
-}
-
-module.exports = new StorageService();
+module.exports = { uploadPersonalShopperAttachment };

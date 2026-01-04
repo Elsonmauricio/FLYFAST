@@ -1,30 +1,66 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTracking } from '../hooks/useTracking';
+import { useParams } from 'react-router-dom';
 import { FaSearch, FaSpinner, FaExclamationCircle, FaBell, FaEnvelope, FaPlane } from 'react-icons/fa';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// Fix para os ícones do Leaflet em React
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
 const Tracking = () => {
-  const [trackingCode, setTrackingCode] = useState('');
+  const params = useParams();
+  // Tenta obter o código do URL (suporta :id ou :trackingCode)
+  const urlCode = params.id || params.trackingCode;
+  
+  const [trackingCode, setTrackingCode] = useState(urlCode || '');
   const { trackingInfo, isLoading, error, fetchTrackingInfo } = useTracking();
 
   // Estado para a subscrição de notificações
   const [emailForUpdates, setEmailForUpdates] = useState('');
   const [isSubscribing, setIsSubscribing] = useState(false);
 
+  // Efeito para buscar automaticamente se vier do link da conta
+  useEffect(() => {
+    if (urlCode) {
+      fetchTrackingInfo(urlCode);
+    }
+  }, [urlCode, fetchTrackingInfo]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     fetchTrackingInfo(trackingCode);
   };
 
-  const handleSubscribe = (e) => {
+  const handleSubscribe = async (e) => {
     e.preventDefault();
     if (!emailForUpdates) return;
     setIsSubscribing(true);
-    // Simulação de chamada à API para registar o email
-    setTimeout(() => {
+    
+    try {
+      const response = await fetch(`/api/shipments/track/${trackingInfo.code}/subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailForUpdates })
+      });
+
+      if (response.ok) {
+        alert(`Notificações ativadas para ${emailForUpdates}! Receberá um email sempre que o estado mudar.`);
+        setEmailForUpdates('');
+      } else {
+        alert('Erro ao subscrever notificações. Tente novamente.');
+      }
+    } catch (error) {
+      alert('Erro de conexão.');
+    } finally {
       setIsSubscribing(false);
-      alert(`Notificações ativadas para ${emailForUpdates}! Receberá um email sempre que o estado mudar.`);
-      setEmailForUpdates('');
-    }, 1500);
+    }
   };
 
   const getProgress = (status) => {
@@ -36,6 +72,20 @@ const Tracking = () => {
       'Entregue': 100
     };
     return statusMap[status] || 5;
+  };
+
+  // Coordenadas das principais cidades (Adicione mais conforme necessário)
+  const LOCATION_COORDINATES = {
+    'Luanda': [ -8.839988, 13.289437 ],
+    'Lisboa': [ 38.722252, -9.139337 ],
+    'Porto': [ 41.157944, -8.629105 ],
+    'Em Trânsito': [ 15.0, 0.0 ], // Ponto no oceano (exemplo visual)
+  };
+
+  const getCoordinates = (location) => {
+    if (!location) return LOCATION_COORDINATES['Luanda'];
+    const key = Object.keys(LOCATION_COORDINATES).find(k => location.includes(k));
+    return LOCATION_COORDINATES[key] || LOCATION_COORDINATES['Luanda'];
   };
 
   return (
@@ -84,52 +134,31 @@ const Tracking = () => {
               Detalhes do Envio: <span className="font-mono">{trackingInfo.code}</span>
             </h2>
             
-            {/* Visual Map */}
-            <div className="mb-8 bg-flyfast-blue rounded-xl p-6 text-white relative overflow-hidden shadow-inner">
-               {/* Abstract Map Background */}
-               <div className="absolute inset-0 opacity-20 pointer-events-none">
-                  <svg width="100%" height="100%">
-                     <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                       <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="0.5"/>
-                     </pattern>
-                     <rect width="100%" height="100%" fill="url(#grid)" />
-                  </svg>
-               </div>
-
-               <div className="relative z-10 flex justify-between items-center h-24 px-4">
-                  {/* Origin */}
-                  <div className="flex flex-col items-center z-20">
-                     <div className="w-3 h-3 bg-flyfast-yellow rounded-full mb-2 shadow-[0_0_10px_rgba(255,215,0,0.8)]"></div>
-                     <span className="font-bold text-lg">{trackingInfo.from || 'Luanda'}</span>
-                  </div>
-
-                  {/* Path Line */}
-                  <div className="flex-1 mx-4 relative h-1 bg-blue-800 rounded-full">
-                     <div 
-                       className="absolute top-0 left-0 h-full bg-flyfast-yellow rounded-full transition-all duration-1000 ease-out"
-                       style={{ width: `${getProgress(trackingInfo.status)}%` }}
-                     ></div>
-                     
-                     {/* Plane Icon */}
-                     <div 
-                       className="absolute top-1/2 -translate-y-1/2 transition-all duration-1000 ease-out"
-                       style={{ left: `${getProgress(trackingInfo.status)}%` }}
-                     >
-                        <div className="bg-white text-flyfast-blue p-1.5 rounded-full shadow-lg transform -translate-x-1/2 rotate-90">
-                           <FaPlane size={14} />
-                        </div>
+            {/* Mapa Interativo */}
+            <div className="mb-8 h-80 rounded-xl overflow-hidden shadow-lg border border-gray-200 z-0 relative">
+               <MapContainer 
+                 center={getCoordinates(trackingInfo.currentLocation)} 
+                 zoom={4} 
+                 style={{ height: '100%', width: '100%' }}
+                 scrollWheelZoom={false}
+               >
+                 <TileLayer
+                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                 />
+                 {/* Marcador da Localização Atual */}
+                 <Marker position={getCoordinates(trackingInfo.currentLocation)}>
+                   <Popup>
+                     <div className="text-center">
+                       <strong className="text-flyfast-blue text-lg">{trackingInfo.currentLocation}</strong>
+                       <br />
+                       <span className="text-sm text-gray-600">{trackingInfo.status}</span>
+                       <br />
+                       <span className="text-xs text-gray-400">{new Date(trackingInfo.lastUpdate).toLocaleDateString()}</span>
                      </div>
-                  </div>
-
-                  {/* Destination */}
-                  <div className="flex flex-col items-center z-20">
-                     <div className={`w-3 h-3 rounded-full mb-2 ${trackingInfo.status === 'Entregue' ? 'bg-green-400' : 'bg-white'}`}></div>
-                     <span className="font-bold text-lg">{trackingInfo.to || 'Lisboa'}</span>
-                  </div>
-               </div>
-               <div className="text-center text-blue-200 text-sm mt-2">
-                  {trackingInfo.status === 'Em Trânsito' ? '✈️ Em voo' : trackingInfo.status}
-               </div>
+                   </Popup>
+                 </Marker>
+               </MapContainer>
             </div>
 
             <div className="mb-8 bg-gray-50 p-4 rounded-lg">
