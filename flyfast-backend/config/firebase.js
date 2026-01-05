@@ -13,17 +13,23 @@ if (!admin.apps.length) {
   } else {
     // Para desenvolvimento: carregar do arquivo local
     try {
-      serviceAccount = require('../flyfast-48af2-firebase-adminsdk-fbsvc-f94e7e1676.json');
+      // Tenta carregar o ficheiro service-account.json padrão ou o específico
+      serviceAccount = require('../service-account.json');
     } catch (error) {
-      console.error("Erro: O arquivo 'flyfast-48af2-firebase-adminsdk-fbsvc-f94e7e1676.json' não foi encontrado na raiz do projeto. Faça o download no console do Firebase.");
-      process.exit(1); // Interrompe a execução se o arquivo for crucial
+      console.error("⚠️ ERRO CRÍTICO: Credenciais do Firebase não encontradas.");
+      console.error("No Vercel: Configure a variável de ambiente FIREBASE_SERVICE_ACCOUNT.");
+      console.error("Localmente: Certifique-se de que 'service-account.json' está na pasta flyfast-backend.");
+      // Não damos exit(1) aqui para permitir que o Vercel mostre o log de erro em vez de apenas crashar silenciosamente
     }
   }
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    storageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'flyfast-48af2.appspot.com', // Nome padrão do bucket
-    databaseURL: `https://${process.env.FIREBASE_PROJECT_ID}.firebaseio.com`
-  });
+
+  if (serviceAccount) {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'flyfast-48af2.appspot.com',
+      databaseURL: `https://${process.env.FIREBASE_PROJECT_ID}.firebaseio.com`
+    });
+  }
 }
 
 // Exportar serviços

@@ -30,7 +30,15 @@ app.set('trust proxy', 1);
 // Middlewares de segurança
 app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: function (origin, callback) {
+    // Permitir pedidos sem origem (como Postman ou mobile apps) e do frontend
+    if (!origin || origin === process.env.FRONTEND_URL || origin.includes('vercel.app') || origin.includes('localhost')) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 
@@ -120,6 +128,7 @@ app.use('*', (req, res) => {
 
 // Error handler
 app.use((err, req, res, next) => {
+  console.error('❌ Erro no Servidor:', err.message);
   console.error(err.stack);
   
   const statusCode = err.statusCode || 500;
