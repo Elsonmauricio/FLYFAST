@@ -5,22 +5,30 @@ const { getStorage } = require('firebase-admin/storage');
 // Inicializar Firebase apenas uma vez
 if (!admin.apps.length) {
   let serviceAccount;
-  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-    // Para produção: carregar de uma variável de ambiente (codificada em base64)
-    const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT;
-    const serviceAccountJson = Buffer.from(serviceAccountBase64, 'base64').toString('ascii');
-    serviceAccount = JSON.parse(serviceAccountJson);
-  } else {
-    // Para desenvolvimento: carregar do arquivo local
-    try {
-      // Tenta carregar o ficheiro service-account.json padrão ou o específico
-      serviceAccount = require('../service-account.json');
-    } catch (error) {
-      console.error("⚠️ ERRO CRÍTICO: Credenciais do Firebase não encontradas.");
-      console.error("No Vercel: Configure a variável de ambiente FIREBASE_SERVICE_ACCOUNT.");
-      console.error("Localmente: Certifique-se de que 'service-account.json' está na pasta flyfast-backend.");
-      // Não damos exit(1) aqui para permitir que o Vercel mostre o log de erro em vez de apenas crashar silenciosamente
+  
+  try {
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+      // Para produção: carregar de uma variável de ambiente (codificada em base64)
+      // Removemos espaços em branco que possam ter sido copiados acidentalmente
+      const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT.replace(/\s/g, '');
+      const serviceAccountJson = Buffer.from(serviceAccountBase64, 'base64').toString('ascii');
+      serviceAccount = JSON.parse(serviceAccountJson);
+      console.log("✅ Credenciais carregadas via Variável de Ambiente.");
+    } else {
+      // Para desenvolvimento: carregar do arquivo local
+      try {
+        serviceAccount = require('../service-account.json');
+        console.log("✅ Credenciais carregadas via ficheiro local.");
+      } catch (error) {
+        console.error("⚠️ ERRO: service-account.json não encontrado localmente.");
+      }
     }
+
+    if (!serviceAccount) {
+      throw new Error("Nenhuma credencial encontrada (Env Var ou Ficheiro Local).");
+    }
+  } catch (error) {
+    console.error("❌ FALHA AO CARREGAR CREDENCIAIS:", error.message);
   }
 
   if (serviceAccount) {
@@ -33,9 +41,20 @@ if (!admin.apps.length) {
 }
 
 // Exportar serviços
-const db = getFirestore();
-const auth = admin.auth();
-const storage = getStorage().bucket();
+let db, auth, storage;
+
+try {
+  db = getFirestore();
+  auth = admin.auth();
+  storage = getStorage().bucket();
+} catch (error) {
+  console.error("❌ ERRO AO INICIALIZAR SERVIÇOS FIREBASE:", error.message);
+  // Mock para evitar crash imediato na importação, permitindo ver os logs
+  db = { collection: () => ({ doc: () => ({ get: () => Promise.reject("Firebase não inicializado") }) }) };
+  auth = { verifyIdToken: () => Promise.reject("Firebase não inicializado") };
+  storage = {};
+}
+
 const FieldValue = admin.firestore.FieldValue;
 
 // Helper functions
