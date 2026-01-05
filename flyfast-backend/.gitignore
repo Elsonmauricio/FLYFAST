@@ -7,3 +7,5 @@ node_modules
 # Ficheiros de ambiente e segredos
 .env
 *.json
+!package.json
+!package-lock.json
