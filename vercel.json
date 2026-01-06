@@ -2,27 +2,28 @@
   "version": 2,
   "builds": [
     {
-      "src": "flyfast-backend/index.js",
-      "use": "@vercel/node"
+      "src": "flyfast-backend/package.json",
+      "use": "@vercel/node",
+      "config": {
+        "distDir": "."
+      }
     },
     {
       "src": "flyfast-frontend/package.json",
       "use": "@vercel/static-build",
-      "config": { "distDir": "build" }
+      "config": { 
+        "distDir": "build" 
+      }
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/flyfast-backend/index.js"
+      "dest": "/flyfast-backend"
     },
     {
       "src": "/static/(.*)",
       "dest": "/flyfast-frontend/static/$1"
-    },
-    {
-      "src": "/(.*)\\.(png|jpg|jpeg|gif|svg|ico|json|css|js|jsx|txt|xml)",
-      "dest": "/flyfast-frontend/$1.$2"
     },
     {
       "src": "/(.*)",
