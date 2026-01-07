@@ -30,11 +30,18 @@ if (!admin.apps.length) {
             // Opção Variáveis Individuais (Vercel)
             let privateKey = process.env.FIREBASE_PRIVATE_KEY;
             
-            // Limpeza robusta da chave
+            // 1. Se a chave estiver entre aspas duplas (comum ao copiar do .env), remove-as
             if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
-                privateKey = privateKey.slice(1, -1); // Remove aspas externas
+                privateKey = privateKey.slice(1, -1);
             }
-            privateKey = privateKey.replace(/\\n/g, '\n'); // Corrige quebras de linha
+            
+            // 2. Converte quebras de linha literais "\\n" para reais "\n"
+            privateKey = privateKey.replace(/\\n/g, '\n');
+
+            // 3. Garante que a chave tem os cabeçalhos corretos (caso tenham sido cortados)
+            if (!privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
+                console.warn("⚠️ Aviso: A chave privada parece incompleta. Verifique o valor no Vercel.");
+            }
 
             serviceAccount = {
                 projectId: process.env.FIREBASE_PROJECT_ID,

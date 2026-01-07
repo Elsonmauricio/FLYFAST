@@ -1,33 +1,18 @@
 {
   "version": 2,
-  "builds": [
+  "rewrites": [
     {
-      "src": "flyfast-backend/package.json",
-      "use": "@vercel/node",
-      "config": {
-        "distDir": "."
-      }
+      "source": "/api/(.*)",
+      "destination": "/flyfast-backend/index.js"
     },
     {
-      "src": "flyfast-frontend/package.json",
-      "use": "@vercel/static-build",
-      "config": { 
-        "distDir": "build" 
-      }
+      "source": "/(.*)",
+      "destination": "/flyfast-frontend/index.html"
     }
   ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/flyfast-backend"
-    },
-    {
-      "src": "/static/(.*)",
-      "dest": "/flyfast-frontend/static/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/flyfast-frontend/index.html"
+  "functions": {
+    "flyfast-backend/index.js": {
+      "maxDuration": 10
     }
-  ]
+  }
 }
