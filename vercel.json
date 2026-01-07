@@ -16,6 +16,7 @@
   "routes": [
     {
       "src": "/api/(.*)",
+      "headers": { "Access-Control-Allow-Origin": "*" },
       "dest": "/flyfast-backend/index.js"
     },
     {
