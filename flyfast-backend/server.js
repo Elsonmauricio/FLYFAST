@@ -32,7 +32,7 @@ app.use(helmet());
 app.use(cors({
   origin: function (origin, callback) {
     // Permitir pedidos sem origem (como Postman ou mobile apps) e do frontend
-    if (!origin || origin === process.env.FRONTEND_URL || origin.includes('vercel.app') || origin.includes('localhost')) {
+    if (!origin || (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL) || origin.endsWith('.vercel.app') || origin.includes('localhost')) {
       callback(null, true);
     } else {
       console.log('CORS blocked origin:', origin);

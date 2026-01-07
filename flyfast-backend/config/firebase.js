@@ -46,6 +46,7 @@ if (!admin.apps.length) {
             
             console.log(`✅ Credenciais carregadas via Variáveis Individuais.`);
             console.log(`   - Project ID: ${serviceAccount.projectId}`);
+            console.log(`   - Private Key Length: ${serviceAccount.privateKey ? serviceAccount.privateKey.length : 0}`);
         }
     }
 
