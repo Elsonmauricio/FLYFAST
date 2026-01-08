@@ -22,6 +22,10 @@
       "handle": "filesystem"
     },
     {
+      "src": "/static/(.*)",
+      "dest": "/flyfast-frontend/static/$1"
+    },
+    {
       "src": "/(.*)",
       "dest": "/flyfast-frontend/index.html"
     }
