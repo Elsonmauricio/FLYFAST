@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { FaUsers, FaBox, FaChartLine, FaSpinner, FaTrash, FaEdit, FaPlus, FaChevronLeft, FaChevronRight, FaEnvelope, FaFileDownload, FaShoppingBag, FaWhatsapp, FaEye, FaPlane, FaBan } from 'react-icons/fa';
 import { AlertProvider, useAlert } from '../contexts/AlertContext';
 import GlobalAlert from '../components/GlobalAlert';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const AdminContent = () => {
   const { authState } = useAuth();
@@ -199,7 +200,11 @@ const AdminContent = () => {
 
   useEffect(() => {
     if (authState.user?.role !== 'admin' || !authState.token) return;
-    if (activeTab === 'dashboard') fetchStats();
+    if (activeTab === 'dashboard') {
+      fetchStats();
+      fetchPersonalShopperRequests();
+      fetchShipments(); // Carregar envios para gerar o gráfico
+    }
     if (activeTab === 'users') fetchUsers(0); // Carrega a primeira página
     if (activeTab === 'shipments') fetchShipments();
     if (activeTab === 'personalShopper') fetchPersonalShopperRequests();
@@ -497,6 +502,32 @@ const AdminContent = () => {
     }
   };
 
+  // Processar dados para o gráfico (Envios por Mês)
+  const getChartData = () => {
+    if (!shipments.length) return [];
+
+    const last6Months = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      const monthName = d.toLocaleString('pt-PT', { month: 'short' });
+      const year = d.getFullYear();
+      last6Months.push({ name: `${monthName}/${year}`, month: d.getMonth(), year: year, envios: 0 });
+    }
+
+    shipments.forEach(shipment => {
+      if (!shipment.createdAt) return;
+      const date = new Date(shipment.createdAt);
+      const month = date.getMonth();
+      const year = date.getFullYear();
+
+      const monthData = last6Months.find(d => d.month === month && d.year === year);
+      if (monthData) monthData.envios++;
+    });
+
+    return last6Months;
+  };
+
   if (authState.isLoading) return <div className="flex justify-center p-20"><FaSpinner className="animate-spin text-4xl" /></div>;
 
   // Segurança: Se não for admin, não renderiza nada enquanto aguarda o redirecionamento
@@ -562,18 +593,67 @@ const AdminContent = () => {
         
         {/* Dashboard View */}
         {activeTab === 'dashboard' && stats && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white p-6 rounded-lg shadow border-l-4 border-blue-500">
-              <h3 className="text-gray-500 text-sm font-bold uppercase">Total Utilizadores</h3>
-              <p className="text-3xl font-bold text-gray-800">{stats.totalUsers || 0}</p>
+          <div className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div onClick={() => setActiveTab('users')} className="bg-white p-6 rounded-lg shadow border-l-4 border-blue-500 cursor-pointer hover:shadow-md transition">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-gray-500 text-sm font-bold uppercase">Total Utilizadores</h3>
+                    <p className="text-3xl font-bold text-gray-800">{stats.totalUsers || 0}</p>
+                  </div>
+                  <FaUsers className="text-4xl text-blue-200" />
+                </div>
+              </div>
+              <div onClick={() => setActiveTab('shipments')} className="bg-white p-6 rounded-lg shadow border-l-4 border-green-500 cursor-pointer hover:shadow-md transition">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-gray-500 text-sm font-bold uppercase">Envios Ativos</h3>
+                    <p className="text-3xl font-bold text-gray-800">{stats.activeShipments || 0}</p>
+                  </div>
+                  <FaBox className="text-4xl text-green-200" />
+                </div>
+              </div>
+              <div onClick={() => setActiveTab('personalShopper')} className="bg-white p-6 rounded-lg shadow border-l-4 border-purple-500 cursor-pointer hover:shadow-md transition">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-gray-500 text-sm font-bold uppercase">Pedidos Personal Shopper</h3>
+                    <p className="text-3xl font-bold text-gray-800">{personalShopperRequests.length || 0}</p>
+                  </div>
+                  <FaShoppingBag className="text-4xl text-purple-200" />
+                </div>
+              </div>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow border-l-4 border-green-500">
-              <h3 className="text-gray-500 text-sm font-bold uppercase">Envios Ativos</h3>
-              <p className="text-3xl font-bold text-gray-800">{stats.activeShipments || 0}</p>
+
+            {/* Gráfico de Envios */}
+            <div className="bg-white p-6 rounded-lg shadow">
+              <h3 className="text-xl font-bold text-gray-800 mb-6">Envios nos Últimos 6 Meses</h3>
+              <div className="h-80 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={getChartData()}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} />
+                    <YAxis axisLine={false} tickLine={false} allowDecimals={false} />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    />
+                    <Bar dataKey="envios" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={40} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow border-l-4 border-yellow-500">
-              <h3 className="text-gray-500 text-sm font-bold uppercase">Receita Estimada</h3>
-              <p className="text-3xl font-bold text-gray-800">{stats.monthlyRevenue?.toLocaleString()} AOA</p>
+
+            <div>
+              <h3 className="text-xl font-bold text-gray-800 mb-4">Ações Rápidas</h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <button onClick={() => { setActiveTab('shipments'); setIsShipmentFormOpen(true); }} className="bg-white p-4 rounded-lg shadow hover:shadow-md transition flex items-center space-x-3 text-left border border-gray-100">
+                  <div className="bg-blue-100 p-3 rounded-full text-flyfast-blue"><FaPlus /></div>
+                  <span className="font-semibold text-gray-700">Novo Envio</span>
+                </button>
+                <button onClick={() => { setActiveTab('routes'); setIsRouteFormOpen(true); }} className="bg-white p-4 rounded-lg shadow hover:shadow-md transition flex items-center space-x-3 text-left border border-gray-100">
+                  <div className="bg-yellow-100 p-3 rounded-full text-yellow-700"><FaPlane /></div>
+                  <span className="font-semibold text-gray-700">Nova Rota</span>
+                </button>
+              </div>
             </div>
           </div>
         )}

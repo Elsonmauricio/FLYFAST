@@ -1,10 +1,34 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import ServiceCard from '../components/ServiceCard';
 import RouteCard from '../components/RouteCard';
-import { SERVICES, UPCOMING_ROUTES } from '../utils/constants';
+import { SERVICES } from '../utils/constants';
+import { FaSpinner } from 'react-icons/fa';
 
 const Home = () => {
+  const navigate = useNavigate();
+  const [routes, setRoutes] = useState([]);
+  const [isLoadingRoutes, setIsLoadingRoutes] = useState(true);
+
+  useEffect(() => {
+    const fetchRoutes = async () => {
+      try {
+        const response = await fetch('/api/schedules?limit=3');
+        if (response.ok) {
+          const data = await response.json();
+          const routesList = data.schedules || data;
+          setRoutes(Array.isArray(routesList) ? routesList.slice(0, 3) : []);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar rotas:', error);
+      } finally {
+        setIsLoadingRoutes(false);
+      }
+    };
+
+    fetchRoutes();
+  }, []);
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -71,11 +95,37 @@ const Home = () => {
             </Link>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {UPCOMING_ROUTES.map(route => (
-              <RouteCard key={route.id} route={route} />
-            ))}
-          </div>
+          {isLoadingRoutes ? (
+            <div className="flex justify-center py-12">
+              <FaSpinner className="animate-spin text-4xl text-flyfast-blue" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {routes.length > 0 ? (
+                routes.map(route => {
+                  // Sanitização de dados para evitar erros visuais (igual à página Routes)
+                  const rawCapacity = parseInt(String(route.capacity).replace(/[^0-9]/g, '')) || 0;
+                  const rawAvailable = parseInt(String(route.available).replace(/[^0-9]/g, '')) || 0;
+                  const capacity = rawCapacity > 0 ? rawCapacity : 50;
+                  const available = rawAvailable > capacity ? capacity : rawAvailable;
+
+                  return (
+                    <RouteCard 
+                      key={route.id} 
+                      route={{...route, capacity, available}} 
+                      onBook={() => navigate('/routes')}
+                    />
+                  );
+                })
+              ) : (
+                <div className="col-span-1 md:col-span-2 lg:col-span-3 text-center py-12 bg-white rounded-xl shadow-sm border border-gray-100">
+                  <div className="text-5xl mb-4">✈️</div>
+                  <h3 className="text-xl font-bold text-gray-700 mb-2">Rotas Indisponíveis</h3>
+                  <p className="text-gray-500">Não há voos agendados para os próximos dias.</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </section>
 
