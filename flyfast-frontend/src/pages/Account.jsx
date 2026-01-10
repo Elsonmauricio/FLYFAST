@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLogout } from '../hooks/useAuthHooks';
 import BookingModal from '../components/BookingModal';
 import { useShipments, useOrders } from '../hooks/useAccountData';
 import { useNotifications } from '../hooks/useNotifications';
-import { FaSpinner, FaExclamationCircle, FaUserShield, FaCopy, FaLock, FaBell, FaSave } from 'react-icons/fa';
+import { FaSpinner, FaExclamationCircle, FaUserShield, FaCopy, FaLock, FaBell, FaSave, FaTrash, FaPlus, FaMapMarkerAlt } from 'react-icons/fa';
 import { auth } from '../lib/firebase';
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 
 const Account = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('profile');
   const { authState } = useAuth();
   const { performLogout } = useLogout();
@@ -48,6 +49,16 @@ const Account = () => {
     confirmPassword: ''
   });
   const [isSaving, setIsSaving] = useState(false);
+
+  // Estados para Gestão de Moradas
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [newAddress, setNewAddress] = useState({
+    label: 'Casa',
+    street: '',
+    city: '',
+    zip: '',
+    country: 'Angola'
+  });
 
   const menuItems = [
     { id: 'profile', label: 'Perfil', icon: '👤' },
@@ -88,6 +99,8 @@ const Account = () => {
           if (response.ok) {
             const data = await response.json();
             setPersonalShopperRequests(data);
+          } else {
+            setPersonalShopperError('Não foi possível carregar o histórico de pedidos.');
           }
         } catch (err) {
           setPersonalShopperError('Erro ao carregar os seus pedidos.');
@@ -236,11 +249,74 @@ const Account = () => {
     }
   };
 
+  const handleAddAddress = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      const currentAddresses = userData.addresses || [];
+      const updatedAddresses = [...currentAddresses, newAddress];
+      
+      const response = await fetch('/api/users/me', {
+        method: 'PUT',
+        headers: { 
+          'Authorization': `Bearer ${authState.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ addresses: updatedAddresses })
+      });
+
+      if (response.ok) {
+        alert('Morada adicionada com sucesso! A página será recarregada para atualizar os dados.');
+        window.location.reload();
+      } else {
+        alert('Erro ao adicionar morada.');
+      }
+    } catch (error) {
+      alert('Erro de conexão.');
+    } finally {
+      setIsSaving(false);
+      setIsAddressModalOpen(false);
+    }
+  };
+
+  const handleDeleteAddress = async (indexToDelete) => {
+    if (!window.confirm('Tem a certeza que deseja remover esta morada?')) return;
+    
+    const currentAddresses = userData.addresses || [];
+    const updatedAddresses = currentAddresses.filter((_, index) => index !== indexToDelete);
+    
+    try {
+      const response = await fetch('/api/users/me', {
+        method: 'PUT',
+        headers: { 
+          'Authorization': `Bearer ${authState.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ addresses: updatedAddresses })
+      });
+
+      if (response.ok) {
+        alert('Morada removida com sucesso!');
+        window.location.reload();
+      } else {
+        alert('Erro ao remover morada.');
+      }
+    } catch (error) {
+      alert('Erro de conexão.');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Account Header */}
       <div className="bg-gradient-to-r from-flyfast-blue to-blue-800 text-white py-12">
         <div className="container mx-auto px-4">
+          <div className="mb-6">
+            <Link to="/" className="inline-flex items-center gap-2 text-white/80 hover:text-white transition-colors">
+              <img src="/logo.png" alt="Flyfast" className="w-6 h-6 rounded-full border border-white/50 object-cover" />
+              <span className="font-medium text-sm">Voltar à Home</span>
+            </Link>
+          </div>
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center space-x-4 mb-6 md:mb-0">
               <div className="w-20 h-20 bg-flyfast-yellow rounded-full flex items-center justify-center">
@@ -311,54 +387,60 @@ const Account = () => {
                 <h2 className="text-2xl font-bold text-flyfast-blue mb-6">
                   Meu Perfil
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-gray-700 font-medium mb-2">
-                      Nome Completo
-                    </label>
-                    <input
-                      type="text"
-                      defaultValue={userData.name}
-                      className="input-field"
-                    />
+                <form onSubmit={handleUpdateProfile}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-gray-700 font-medium mb-2">
+                        Nome Completo
+                      </label>
+                      <input
+                        type="text"
+                        value={profileForm.name}
+                        onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                        className="input-field"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-700 font-medium mb-2">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        value={userData.email || ''}
+                        className="input-field bg-gray-100 cursor-not-allowed"
+                        disabled
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-700 font-medium mb-2">
+                        Telemóvel
+                      </label>
+                      <input
+                        type="tel"
+                        value={profileForm.phone}
+                        onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                        className="input-field"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-700 font-medium mb-2">
+                        Membro desde
+                      </label>
+                      <input
+                        type="text"
+                        defaultValue={userData.memberSince}
+                        className="input-field bg-gray-100 cursor-not-allowed"
+                        disabled
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-gray-700 font-medium mb-2">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      defaultValue={userData.email}
-                      className="input-field"
-                    />
+                  <div className="mt-8">
+                    <button type="submit" disabled={isSaving} className="btn-primary flex items-center justify-center gap-2">
+                      {isSaving && <FaSpinner className="animate-spin" />}
+                      <span>Guardar Alterações</span>
+                    </button>
                   </div>
-                  <div>
-                    <label className="block text-gray-700 font-medium mb-2">
-                      Telemóvel
-                    </label>
-                    <input
-                      type="tel"
-                      defaultValue={userData.phone}
-                      className="input-field"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-gray-700 font-medium mb-2">
-                      Membro desde
-                    </label>
-                    <input
-                      type="text"
-                      defaultValue={userData.memberSince}
-                      className="input-field bg-gray-50"
-                      disabled
-                    />
-                  </div>
-                </div>
-                <div className="mt-8">
-                  <button className="btn-primary">
-                    Guardar Alterações
-                  </button>
-                </div>
+                </form>
               </div>
             )}
 
@@ -419,13 +501,23 @@ const Account = () => {
                             </span>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {/* ... (restante da estrutura do card) ... */}
+                            <div className="bg-gray-50 p-3 rounded">
+                              <p className="text-xs text-gray-500 uppercase font-bold">Peso / Dimensões</p>
+                              <p className="font-semibold">{shipment.weight ? `${shipment.weight} kg` : 'N/D'}</p>
+                            </div>
+                            <div className="bg-gray-50 p-3 rounded">
+                              <p className="text-xs text-gray-500 uppercase font-bold">Custo Estimado</p>
+                              <p className="font-semibold text-flyfast-blue">{shipment.cost ? `${shipment.cost} AOA` : 'A calcular'}</p>
+                            </div>
+                            <div className="bg-gray-50 p-3 rounded">
+                              <p className="text-xs text-gray-500 uppercase font-bold">Destinatário</p>
+                              <p className="font-semibold truncate">{shipment.receiverName || userData.name || 'Eu'}</p>
+                            </div>
                           </div>
                           <div className="mt-4 flex space-x-4">
                             <Link to={`/tracking/${shipment.id}`} className="text-flyfast-blue font-semibold hover:text-blue-900">
                               Rastrear
                             </Link>
-                            {/* ... */}
                           </div>
                         </div>
                       ))
@@ -505,7 +597,7 @@ const Account = () => {
                 </h2>
                 
                 <div className="mb-6">
-                  <button className="btn-primary w-full md:w-auto">
+                  <button onClick={() => navigate('/personal-shopper')} className="btn-primary w-full md:w-auto">
                     👔 Novo Pedido Personal Shopper
                   </button>
                 </div>
@@ -531,25 +623,52 @@ const Account = () => {
                       </div>
                     ) : (
                       personalShopperRequests.map(request => (
-                        <div key={request.id} className="card">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h3 className="font-bold text-lg">{request.productName}</h3>
-                              <p className="text-sm text-gray-500">
-                                {new Date(request.createdAt).toLocaleDateString('pt-PT')}
+                        <div key={request.id} className="card hover:shadow-md transition-shadow">
+                          <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <h3 className="font-bold text-lg text-flyfast-blue">{request.productName}</h3>
+                                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                                  {new Date(request.createdAt).toLocaleDateString('pt-PT')}
+                                </span>
+                              </div>
+                              
+                              {request.productLink && (
+                                <a href={request.productLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline block mb-2 truncate max-w-md">
+                                  🔗 {request.productLink}
+                                </a>
+                              )}
+                              
+                              <p className="text-gray-600 text-sm mb-2 line-clamp-2">
+                                {request.details || 'Sem detalhes adicionais.'}
                               </p>
-                              <p className="text-gray-700 mt-1">Orçamento: {request.budget || 'N/A'}</p>
+
+                              <div className="flex flex-wrap gap-4 text-sm mt-3">
+                                <div className="bg-gray-50 px-3 py-1 rounded border">
+                                  <span className="font-semibold text-gray-500">Orçamento:</span> {request.budget || 'N/A'}
+                                </div>
+                                <div className="bg-gray-50 px-3 py-1 rounded border">
+                                  <span className="font-semibold text-gray-500">País:</span> {request.deliveryCountry || 'Angola'}
+                                </div>
+                              </div>
                             </div>
-                            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                              request.status === 'completed' ? 'bg-green-100 text-green-800' :
-                              request.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                              'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {request.status === 'pending' ? 'Pendente' : 
-                               request.status === 'processing' ? 'Em Processamento' :
-                               request.status === 'purchased' ? 'Comprado' :
-                               request.status === 'completed' ? 'Concluído' : request.status}
-                            </span>
+
+                            <div className="flex flex-col items-end min-w-[140px]">
+                              <span className={`px-3 py-1 rounded-full text-sm font-bold text-center w-full mb-2 ${
+                                request.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                request.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                request.status === 'purchased' ? 'bg-purple-100 text-purple-800' :
+                                request.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                                'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {request.status === 'pending' ? 'Pendente' : 
+                                 request.status === 'processing' ? 'Em Processamento' :
+                                 request.status === 'purchased' ? 'Comprado' :
+                                 request.status === 'completed' ? 'Concluído' : 
+                                 request.status === 'cancelled' ? 'Cancelado' : request.status}
+                              </span>
+                              {request.id && <p className="text-xs text-gray-400">ID: {request.id.slice(0, 8)}...</p>}
+                            </div>
                           </div>
                         </div>
                       ))
@@ -602,6 +721,49 @@ const Account = () => {
                     )}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Addresses Tab */}
+            {activeTab === 'addresses' && (
+              <div>
+                <h2 className="text-2xl font-bold text-flyfast-blue mb-6">
+                  Minhas Moradas
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Lista de Moradas Existentes */}
+                  {userData.addresses && userData.addresses.map((addr, index) => (
+                    <div key={index} className="card relative border border-gray-200 hover:shadow-md transition">
+                        <button 
+                          onClick={() => handleDeleteAddress(index)} 
+                          className="absolute top-4 right-4 text-red-400 hover:text-red-600 p-1"
+                          title="Remover morada"
+                        >
+                          <FaTrash />
+                        </button>
+                        <div className="flex items-start gap-3">
+                          <FaMapMarkerAlt className="text-flyfast-blue text-xl mt-1" />
+                          <div>
+                            <h3 className="font-bold text-lg">{addr.label || 'Morada'}</h3>
+                            <p className="text-gray-600">{addr.street}</p>
+                            <p className="text-gray-600">{addr.city}, {addr.zip}</p>
+                            <p className="text-gray-500 text-sm mt-1">{addr.country}</p>
+                          </div>
+                        </div>
+                    </div>
+                  ))}
+
+                  {/* Botão Adicionar Nova */}
+                  <button 
+                    onClick={() => setIsAddressModalOpen(true)}
+                    className="card border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-flyfast-blue hover:bg-blue-50 transition min-h-[160px]"
+                  >
+                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-3 text-flyfast-blue">
+                        <FaPlus />
+                      </div>
+                      <p className="font-bold text-gray-600">Adicionar Nova Morada</p>
+                  </button>
+                </div>
               </div>
             )}
 
@@ -763,6 +925,85 @@ const Account = () => {
         onSubmit={handleBookingSubmit}
         isLoading={isBookingLoading}
       />
+
+      {/* Modal de Adicionar Morada */}
+      {isAddressModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <h3 className="text-xl font-bold text-flyfast-blue mb-4">Nova Morada</h3>
+            <form onSubmit={handleAddAddress} className="space-y-4">
+              <div>
+                <label className="label">Nome da Morada (Ex: Casa, Escritório)</label>
+                <input 
+                  type="text" 
+                  className="input-field" 
+                  value={newAddress.label}
+                  onChange={e => setNewAddress({...newAddress, label: e.target.value})}
+                  required
+                />
+              </div>
+              <div>
+                <label className="label">Rua e Número</label>
+                <input 
+                  type="text" 
+                  className="input-field" 
+                  value={newAddress.street}
+                  onChange={e => setNewAddress({...newAddress, street: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="label">Cidade</label>
+                  <input 
+                    type="text" 
+                    className="input-field" 
+                    value={newAddress.city}
+                    onChange={e => setNewAddress({...newAddress, city: e.target.value})}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="label">Código Postal</label>
+                  <input 
+                    type="text" 
+                    className="input-field" 
+                    value={newAddress.zip}
+                    onChange={e => setNewAddress({...newAddress, zip: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="label">País</label>
+                <select 
+                  className="input-field"
+                  value={newAddress.country}
+                  onChange={e => setNewAddress({...newAddress, country: e.target.value})}
+                >
+                  <option>Angola</option>
+                  <option>Portugal</option>
+                </select>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button 
+                  type="button" 
+                  onClick={() => setIsAddressModalOpen(false)}
+                  className="flex-1 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={isSaving}
+                  className="flex-1 btn-primary"
+                >
+                  {isSaving ? 'A guardar...' : 'Guardar Morada'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -11,13 +11,13 @@ const Footer = () => {
           {/* Company Info */}
           <div>
             <div className="flex items-center space-x-3 mb-4">
-              <div className="w-12 h-12 flex items-center justify-center"> {/* Removido bg-flyfast-yellow e rounded-full se o logo já for redondo/colorido */}
-                            <img src={FlyfastLogo} alt="FLYFAST Logo" className="h-full w-auto" /> {/* Ajuste o tamanho conforme necessário */}
-                          </div>
+              <div className="w-12 h-12 flex items-center justify-center">
+                <img src={FlyfastLogo} alt="FLYFAST Logo" className="w-full h-full object-cover rounded-full border-2 border-white/20" />
+              </div>
               <h2 className="text-2xl font-bold font-heading">FLYFAST</h2>
             </div>
             <p className="text-gray-300 mb-4">
-              Conectando Luanda e Lisboa com velocidade e confiança desde 2020.
+              Conectando Luanda e Lisboa com velocidade e confiança desde 2023.
             </p>
             <p className="text-flyfast-yellow font-bold text-lg">
               VOE CONNOSCO!
@@ -73,10 +73,6 @@ const Footer = () => {
                 <span>Angola: +244 943 427 296</span>
               </li>
               <li className="flex items-center space-x-2">
-                <span>📞</span>
-                <span>Portugal: +244 948 787 653</span>
-              </li>
-              <li className="flex items-center space-x-2">
                 <span>📧</span>
                 <span>flyfast163@gmail.com</span>
               </li>
@@ -102,7 +98,8 @@ const Footer = () => {
               <div>
                 <h4 className="font-bold">🇵🇹 Portugal</h4>
                 <p className="text-gray-300">
-                  Rua João Villaret 7, Queluz 2745-285 <br />
+                  Centro Comercial Quinta Nova, Loja 2. 
+                  Rua de Alves Redol 1, 2675-285 Odivelas <br />
                   Lisboa, Portugal
                 </p>
               </div>

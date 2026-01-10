@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { FaUsers, FaBox, FaChartLine, FaSpinner, FaTrash, FaEdit, FaPlus, FaChevronLeft, FaChevronRight, FaEnvelope, FaFileDownload, FaShoppingBag, FaWhatsapp, FaEye, FaPlane, FaBan } from 'react-icons/fa';
+import { FaUsers, FaBox, FaChartLine, FaSpinner, FaTrash, FaEdit, FaPlus, FaChevronLeft, FaChevronRight, FaEnvelope, FaFileDownload, FaShoppingBag, FaWhatsapp, FaEye, FaPlane, FaBan, FaTags, FaSave, FaHistory } from 'react-icons/fa';
 import { AlertProvider, useAlert } from '../contexts/AlertContext';
 import GlobalAlert from '../components/GlobalAlert';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -40,6 +40,10 @@ const AdminContent = () => {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
+  // Estados para visualização de detalhes do utilizador
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [isUserDetailsModalOpen, setIsUserDetailsModalOpen] = useState(false);
+
   // Estados para gestão de Rotas
   const [isRouteFormOpen, setIsRouteFormOpen] = useState(false);
   const [newRoute, setNewRoute] = useState({
@@ -60,6 +64,32 @@ const AdminContent = () => {
   const [routesPage, setRoutesPage] = useState(0);
   const [routesCursors, setRoutesCursors] = useState([null]); // Pilha de cursores
   const [hasMoreRoutes, setHasMoreRoutes] = useState(false);
+
+  // Estados para Tabela de Preços
+  const [pricing, setPricing] = useState({
+    pricePerKg: 12.99,
+    serviceFee: 0,
+    insuranceRate: 0,
+    specificArticles: [
+      { article: 'Perfumes/Duplos', price: '7€ | 10€ KG', tax: '35% da fatura' },
+      { article: 'Cartões Visa', price: '15 €', tax: '-' },
+      { article: 'Documentos', price: '15 €', tax: '-' },
+      { article: 'Telemóveis', price: '20 €', tax: '23% da fatura' },
+      { article: 'Computadores', price: '35 €', tax: '23% da fatura' },
+      { article: 'Artigos de Ouro', price: '15 €', tax: '-' },
+      { article: 'Playstation 4/5', price: '45 €', tax: '23% da fatura' }
+    ],
+    weightArticles: [
+      { article: 'Roupas', tax: '23% da fatura' },
+      { article: 'Calçados', tax: '23% da fatura' },
+      { article: 'Cosméticos', tax: '35% da fatura' },
+      { article: 'TV\'s', tax: '23% da fatura' },
+      { article: 'Eletrodomésticos', tax: '23% da fatura' },
+      { article: 'Máquinas Pesadas', tax: '23% da fatura' }
+    ]
+  });
+  const [pricingLogs, setPricingLogs] = useState([]);
+  const [contactMessages, setContactMessages] = useState([]);
 
   // Verificar se é admin
   useEffect(() => {
@@ -198,6 +228,88 @@ const AdminContent = () => {
     }
   };
 
+  const fetchPricing = async () => {
+    if (!authState.token) return;
+    setIsLoading(true);
+    try {
+      // Buscar preços atuais
+      const response = await fetch('/api/admin/pricing', {
+        headers: { 'Authorization': `Bearer ${authState.token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setPricing(data);
+      }
+
+      // Buscar logs de auditoria
+      const logsResponse = await fetch('/api/admin/pricing/logs', {
+        headers: { 'Authorization': `Bearer ${authState.token}` }
+      });
+      if (logsResponse.ok) {
+        const logsData = await logsResponse.json();
+        setPricingLogs(logsData);
+      }
+    } catch (err) {
+      setError('Erro ao carregar preços');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Estados locais para adicionar novos itens na tabela de preços
+  const [newSpecificArticle, setNewSpecificArticle] = useState({ article: '', price: '', tax: '' });
+  const [newWeightArticle, setNewWeightArticle] = useState({ article: '', tax: '' });
+
+  const handleAddSpecificArticle = () => {
+    if (!newSpecificArticle.article || !newSpecificArticle.price) return;
+    setPricing(prev => ({
+      ...prev,
+      specificArticles: [...(prev.specificArticles || []), newSpecificArticle]
+    }));
+    setNewSpecificArticle({ article: '', price: '', tax: '' });
+  };
+
+  const handleRemoveSpecificArticle = (index) => {
+    setPricing(prev => ({
+      ...prev,
+      specificArticles: (prev.specificArticles || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleAddWeightArticle = () => {
+    if (!newWeightArticle.article) return;
+    setPricing(prev => ({
+      ...prev,
+      weightArticles: [...(prev.weightArticles || []), newWeightArticle]
+    }));
+    setNewWeightArticle({ article: '', tax: '' });
+  };
+
+  const handleRemoveWeightArticle = (index) => {
+    setPricing(prev => ({
+      ...prev,
+      weightArticles: (prev.weightArticles || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const fetchContactMessages = async () => {
+    if (!authState.token) return;
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/admin/contact-requests', {
+        headers: { 'Authorization': `Bearer ${authState.token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setContactMessages(data);
+      }
+    } catch (err) {
+      setError('Erro ao carregar mensagens');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (authState.user?.role !== 'admin' || !authState.token) return;
     if (activeTab === 'dashboard') {
@@ -209,6 +321,8 @@ const AdminContent = () => {
     if (activeTab === 'shipments') fetchShipments();
     if (activeTab === 'personalShopper') fetchPersonalShopperRequests();
     if (activeTab === 'routes') fetchRoutes(0);
+    if (activeTab === 'pricing') fetchPricing();
+    if (activeTab === 'messages') fetchContactMessages();
   }, [activeTab, authState.user, authState.token]);
 
   const handleDeleteUser = async (userId) => {
@@ -231,10 +345,10 @@ const AdminContent = () => {
   };
 
   const handleUpdateUserRole = async (userId, currentRole) => {
-    const newRole = prompt("Introduza o novo role (admin, customer):", currentRole);
+    const newRole = prompt("Introduza o novo role (admin, customer, user):", currentRole);
     if (newRole && newRole !== currentRole) {
       try {
-        const response = await fetch(`/api/admin/users/${userId}`, {
+        const response = await fetch(`/api/users/${userId}`, {
           method: 'PUT',
           headers: { 
             'Authorization': `Bearer ${authState.token}`,
@@ -407,6 +521,11 @@ const AdminContent = () => {
     setIsDetailsModalOpen(true);
   };
 
+  const handleViewUserDetails = (user) => {
+    setSelectedUser(user);
+    setIsUserDetailsModalOpen(true);
+  };
+
   const handleUpdatePersonalShopperStatus = async (e) => {
     const newStatus = e.target.value;
     if (!selectedRequest) return;
@@ -502,6 +621,75 @@ const AdminContent = () => {
     }
   };
 
+  const handleUpdatePoints = async (userId, currentPoints) => {
+    const newPoints = prompt("Introduza o novo saldo de pontos:", currentPoints);
+    if (newPoints !== null && !isNaN(newPoints)) {
+        try {
+            const response = await fetch(`/api/users/${userId}`, {
+                method: 'PUT',
+                headers: { 
+                    'Authorization': `Bearer ${authState.token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ loyaltyPoints: parseInt(newPoints) })
+            });
+            if (response.ok) {
+                // Atualizar estado local do utilizador selecionado
+                setSelectedUser(prev => ({ ...prev, loyaltyPoints: parseInt(newPoints) }));
+                // Atualizar na lista geral
+                setUsers(prev => prev.map(u => u.id === userId ? { ...u, loyaltyPoints: parseInt(newPoints) } : u));
+                showAlert('success', 'Pontos de fidelidade atualizados!');
+            } else {
+                const data = await response.json();
+                showAlert('error', data.error || 'Erro ao atualizar pontos');
+            }
+        } catch (err) {
+            showAlert('error', 'Erro de conexão');
+        }
+    }
+  };
+
+  const handleUpdatePricing = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch('/api/admin/pricing', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${authState.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(pricing)
+      });
+      
+      if (response.ok) {
+        showAlert('success', 'Tabela de preços atualizada com sucesso!');
+        fetchPricing(); // Recarrega para atualizar os logs
+      } else {
+        showAlert('error', 'Erro ao atualizar preços');
+      }
+    } catch (err) {
+      showAlert('error', 'Erro de conexão');
+    }
+  };
+
+  const handleDeleteMessage = async (id) => {
+    if(!window.confirm('Tem a certeza que deseja apagar esta mensagem?')) return;
+    try {
+      const response = await fetch(`/api/admin/contact-requests/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${authState.token}` }
+      });
+      if (response.ok) {
+        fetchContactMessages();
+        showAlert('success', 'Mensagem apagada com sucesso');
+      } else {
+        showAlert('error', 'Erro ao apagar mensagem');
+      }
+    } catch (err) {
+      showAlert('error', 'Erro de conexão');
+    }
+  };
+
   // Processar dados para o gráfico (Envios por Mês)
   const getChartData = () => {
     if (!shipments.length) return [];
@@ -540,7 +728,8 @@ const AdminContent = () => {
       {/* Sidebar */}
       <div className="w-full md:w-64 bg-flyfast-blue text-white p-6">
         <h1 className="text-2xl font-bold mb-10 flex items-center gap-2">
-           🛡️ Admin
+           <img src="/logo.png" alt="Logo" className="w-8 h-8 rounded-full border-2 border-white object-cover" />
+           <span>Admin</span>
         </h1>
         <nav className="space-y-2 flex flex-row md:flex-col overflow-x-auto md:overflow-visible">
           <button 
@@ -572,6 +761,18 @@ const AdminContent = () => {
             className={`flex items-center space-x-3 w-full p-3 rounded transition ${activeTab === 'routes' ? 'bg-blue-800' : 'hover:bg-blue-700'}`}
           >
             <FaPlane /> <span>Rotas</span>
+          </button>
+          <button 
+            onClick={() => setActiveTab('pricing')}
+            className={`flex items-center space-x-3 w-full p-3 rounded transition ${activeTab === 'pricing' ? 'bg-blue-800' : 'hover:bg-blue-700'}`}
+          >
+            <FaTags /> <span>Tabela de Preços</span>
+          </button>
+          <button 
+            onClick={() => setActiveTab('messages')}
+            className={`flex items-center space-x-3 w-full p-3 rounded transition ${activeTab === 'messages' ? 'bg-blue-800' : 'hover:bg-blue-700'}`}
+          >
+            <FaEnvelope /> <span>Mensagens</span>
           </button>
         </nav>
       </div>
@@ -661,6 +862,79 @@ const AdminContent = () => {
         {/* Users View */}
         {activeTab === 'users' && (
           <div className="bg-white rounded-lg shadow overflow-hidden">
+            
+            {/* Modal de Detalhes do Utilizador */}
+            {isUserDetailsModalOpen && selectedUser && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                        <div className="p-6 border-b flex justify-between items-center">
+                            <h3 className="text-xl font-bold text-gray-800">Detalhes do Utilizador</h3>
+                            <button onClick={() => setIsUserDetailsModalOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                        </div>
+                        <div className="p-6 space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <h4 className="font-bold text-gray-700 text-sm uppercase mb-2">Informação Pessoal</h4>
+                                    <p><span className="font-semibold">Nome:</span> {selectedUser.name || 'N/D'}</p>
+                                    <p><span className="font-semibold">Email:</span> {selectedUser.email}</p>
+                                    <p><span className="font-semibold">Telefone:</span> {selectedUser.phone || 'N/D'}</p>
+                                    <p><span className="font-semibold">ID:</span> <span className="font-mono text-xs">{selectedUser.id}</span></p>
+                                    <p><span className="font-semibold">Role:</span> <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${selectedUser.role === 'admin' ? 'bg-purple-100 text-purple-800' : selectedUser.role === 'customer' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>{selectedUser.role || 'user'}</span></p>
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-gray-700 text-sm uppercase mb-2">Conta</h4>
+                                    <p><span className="font-semibold">Membro desde:</span> {selectedUser.memberSince || (selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleDateString('pt-PT') : 'N/D')}</p>
+                                    <p className="flex items-center gap-2">
+                                      <span className="font-semibold">Pontos Fidelidade:</span> 
+                                      <span>{selectedUser.loyaltyPoints || 0}</span>
+                                      <button 
+                                        onClick={() => handleUpdatePoints(selectedUser.id, selectedUser.loyaltyPoints || 0)}
+                                        className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded hover:bg-blue-200 border border-blue-200"
+                                        title="Editar Pontos"
+                                      >
+                                        <FaEdit />
+                                      </button>
+                                    </p>
+                                </div>
+                            </div>
+
+                            {selectedUser.addresses && selectedUser.addresses.length > 0 && (
+                                <div className="border-t pt-4">
+                                    <h4 className="font-bold text-gray-700 text-sm uppercase mb-3">Moradas Guardadas</h4>
+                                    <div className="grid grid-cols-1 gap-3">
+                                        {selectedUser.addresses.map((addr, idx) => (
+                                            <div key={idx} className="bg-gray-50 p-3 rounded border border-gray-200 text-sm">
+                                                <p className="font-bold text-gray-800">{addr.label || `Morada ${idx + 1}`}</p>
+                                                <p>{addr.street}</p>
+                                                <p>{addr.city}, {addr.zip}</p>
+                                                <p>{addr.country}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {selectedUser.preferences && (
+                                <div className="border-t pt-4">
+                                    <h4 className="font-bold text-gray-700 text-sm uppercase mb-2">Preferências</h4>
+                                    <div className="flex gap-4">
+                                        <span className={`px-3 py-1 rounded-full text-sm ${selectedUser.preferences.emailUpdates ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-500'}`}>
+                                            Email: {selectedUser.preferences.emailUpdates ? 'Sim' : 'Não'}
+                                        </span>
+                                        <span className={`px-3 py-1 rounded-full text-sm ${selectedUser.preferences.whatsappUpdates ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}>
+                                            WhatsApp: {selectedUser.preferences.whatsappUpdates ? 'Sim' : 'Não'}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        <div className="p-6 border-t bg-gray-50 flex justify-end">
+                            <button onClick={() => setIsUserDetailsModalOpen(false)} className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 font-medium">Fechar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="overflow-x-auto">
                 <table className="w-full">
                 <thead className="bg-gray-50 border-b">
@@ -677,13 +951,14 @@ const AdminContent = () => {
                         <td className="p-4 whitespace-nowrap">{user.name || 'Sem nome'}</td>
                         <td className="p-4 whitespace-nowrap">{user.email}</td>
                         <td className="p-4 whitespace-nowrap">
-                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>
-                                {user.role || 'customer'}
+                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' : user.role === 'customer' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
+                                {user.role || 'user'}
                             </span>
                         </td>
                         <td className="p-4 whitespace-nowrap flex space-x-3">
-                        <button onClick={() => handleUpdateUserRole(user.id, user.role)} className="text-blue-600 hover:text-blue-900"><FaEdit /></button>
-                        <button onClick={() => handleDeleteUser(user.id)} className="text-red-600 hover:text-red-900"><FaTrash /></button>
+                            <button onClick={() => handleViewUserDetails(user)} className="text-gray-600 hover:text-gray-900" title="Ver Detalhes"><FaEye /></button>
+                            <button onClick={() => handleUpdateUserRole(user.id, user.role)} className="text-blue-600 hover:text-blue-900" title="Editar Role"><FaEdit /></button>
+                            <button onClick={() => handleDeleteUser(user.id)} className="text-red-600 hover:text-red-900" title="Apagar"><FaTrash /></button>
                         </td>
                     </tr>
                     ))}
@@ -1207,6 +1482,214 @@ const AdminContent = () => {
                 </tbody>
                 </table>
             </div>
+          </div>
+        )}
+
+        {/* Pricing View */}
+        {activeTab === 'pricing' && (
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+             <div className="p-6 border-b bg-gray-50">
+                <h3 className="font-bold text-gray-700 text-lg">Configuração da Tabela de Preços</h3>
+                <p className="text-sm text-gray-500">Defina os valores base para o cálculo automático de envios.</p>
+             </div>
+             
+             <div className="p-8 max-w-2xl">
+                <form onSubmit={handleUpdatePricing} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                      <label className="block text-sm font-bold text-gray-700 mb-2 uppercase">Preço Base por Kg (€)</label>
+                      <div className="relative">
+                        <input 
+                          type="number" 
+                          className="block w-full rounded border-gray-300 shadow-sm p-3 pl-4 border text-lg font-bold text-flyfast-blue"
+                          value={pricing.pricePerKg}
+                          onChange={e => setPricing({...pricing, pricePerKg: parseFloat(e.target.value)})}
+                          required
+                        />
+                        <span className="absolute right-4 top-3 text-gray-400 font-medium">€/kg</span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">Valor usado para multiplicar pelo peso do pacote.</p>
+                    </div>
+
+                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                      <label className="block text-sm font-bold text-gray-700 mb-2 uppercase">Taxa de Serviço Fixa (€)</label>
+                      <div className="relative">
+                        <input 
+                          type="number" 
+                          className="block w-full rounded border-gray-300 shadow-sm p-3 pl-4 border text-lg"
+                          value={pricing.serviceFee}
+                          onChange={e => setPricing({...pricing, serviceFee: parseFloat(e.target.value)})}
+                        />
+                        <span className="absolute right-4 top-3 text-gray-400 font-medium">€</span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">Valor fixo adicionado a cada envio (opcional).</p>
+                    </div>
+                  </div>
+
+                  {/* Gestão de Artigos Específicos */}
+                  <div className="bg-white p-4 rounded-lg border border-gray-200 mt-6">
+                    <h4 className="font-bold text-gray-700 mb-4 uppercase text-sm">Artigos Específicos (Preço Fixo)</h4>
+                    <div className="overflow-x-auto mb-4">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="p-2 text-left">Artigo</th>
+                            <th className="p-2 text-left">Preço Fixo</th>
+                            <th className="p-2 text-left">Taxa de Fatura (%)</th>
+                            <th className="p-2"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {(pricing.specificArticles || []).map((item, idx) => (
+                            <tr key={idx}>
+                              <td className="p-2">{item.article}</td>
+                              <td className="p-2">{item.price}</td>
+                              <td className="p-2">{item.tax}</td>
+                              <td className="p-2 text-right">
+                                <button type="button" onClick={() => handleRemoveSpecificArticle(idx)} className="text-red-500 hover:text-red-700"><FaTrash /></button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-2 items-end bg-gray-50 p-3 rounded">
+                      <div>
+                        <label className="text-xs font-bold text-gray-500">Artigo</label>
+                        <input type="text" className="w-full border rounded p-1 text-sm" value={newSpecificArticle.article} onChange={e => setNewSpecificArticle({...newSpecificArticle, article: e.target.value})} placeholder="Ex: Telemóveis" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-gray-500">Preço</label>
+                        <input type="text" className="w-full border rounded p-1 text-sm" value={newSpecificArticle.price} onChange={e => setNewSpecificArticle({...newSpecificArticle, price: e.target.value})} placeholder="Ex: 20 €" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-gray-500">Taxa</label>
+                        <input type="text" className="w-full border rounded p-1 text-sm" value={newSpecificArticle.tax} onChange={e => setNewSpecificArticle({...newSpecificArticle, tax: e.target.value})} placeholder="Ex: 23% da fatura" />
+                      </div>
+                      <button type="button" onClick={handleAddSpecificArticle} className="bg-blue-600 text-white p-1 rounded text-sm font-bold h-8">Adicionar</button>
+                    </div>
+                  </div>
+
+                  {/* Gestão de Artigos por Peso */}
+                  <div className="bg-white p-4 rounded-lg border border-gray-200 mt-6">
+                    <h4 className="font-bold text-gray-700 mb-4 uppercase text-sm">Artigos por Peso (Taxas Especiais)</h4>
+                    <div className="overflow-x-auto mb-4">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="p-2 text-left">Artigo</th>
+                            <th className="p-2 text-left">Taxa de Fatura (%)</th>
+                            <th className="p-2"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {(pricing.weightArticles || []).map((item, idx) => (
+                            <tr key={idx}>
+                              <td className="p-2">{item.article}</td>
+                              <td className="p-2">{item.tax}</td>
+                              <td className="p-2 text-right">
+                                <button type="button" onClick={() => handleRemoveWeightArticle(idx)} className="text-red-500 hover:text-red-700"><FaTrash /></button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2 items-end bg-gray-50 p-3 rounded">
+                      <div>
+                        <label className="text-xs font-bold text-gray-500">Artigo</label>
+                        <input type="text" className="w-full border rounded p-1 text-sm" value={newWeightArticle.article} onChange={e => setNewWeightArticle({...newWeightArticle, article: e.target.value})} placeholder="Ex: Roupas" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-gray-500">Taxa</label>
+                        <input type="text" className="w-full border rounded p-1 text-sm" value={newWeightArticle.tax} onChange={e => setNewWeightArticle({...newWeightArticle, tax: e.target.value})} placeholder="Ex: 23% da fatura" />
+                      </div>
+                      <button type="button" onClick={handleAddWeightArticle} className="bg-blue-600 text-white p-1 rounded text-sm font-bold h-8">Adicionar</button>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t">
+                    <button type="submit" className="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 font-bold shadow-lg flex items-center gap-2">
+                      <FaSave /> Guardar Alterações
+                    </button>
+                  </div>
+                </form>
+             </div>
+
+             {/* Histórico de Alterações */}
+             <div className="p-8 border-t bg-gray-50">
+                <h3 className="font-bold text-gray-700 text-lg mb-4 flex items-center gap-2">
+                  <FaHistory /> Histórico de Alterações
+                </h3>
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="p-3 text-left">Data</th>
+                        <th className="p-3 text-left">Responsável</th>
+                        <th className="p-3 text-left">Alteração</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {pricingLogs.length === 0 ? (
+                        <tr><td colSpan="3" className="p-4 text-center text-gray-500">Nenhum registo encontrado.</td></tr>
+                      ) : (
+                        pricingLogs.map(log => (
+                          <tr key={log.id}>
+                            <td className="p-3 text-gray-600">{new Date(log.timestamp).toLocaleString('pt-PT')}</td>
+                            <td className="p-3 font-medium">{log.performedByEmail}</td>
+                            <td className="p-3 text-gray-600">
+                              Atualizou preços (Antigo: {log.details?.oldValue?.pricePerKg || 'N/A'} ➝ Novo: {log.details?.newValue?.pricePerKg})
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+             </div>
+          </div>
+        )}
+
+        {/* Messages View */}
+        {activeTab === 'messages' && (
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+             <div className="p-4 border-b bg-gray-50">
+                <h3 className="font-bold text-gray-700">Mensagens de Contacto</h3>
+             </div>
+             <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b">
+                    <tr>
+                      <th className="p-4 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
+                      <th className="p-4 text-left text-xs font-medium text-gray-500 uppercase">Remetente</th>
+                      <th className="p-4 text-left text-xs font-medium text-gray-500 uppercase">Assunto</th>
+                      <th className="p-4 text-left text-xs font-medium text-gray-500 uppercase">Mensagem</th>
+                      <th className="p-4 text-left text-xs font-medium text-gray-500 uppercase">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {contactMessages.map(msg => (
+                      <tr key={msg.id} className="hover:bg-gray-50">
+                        <td className="p-4 whitespace-nowrap text-sm">{new Date(msg.createdAt).toLocaleDateString('pt-PT')}</td>
+                        <td className="p-4 whitespace-nowrap">
+                          <div className="text-sm font-bold">{msg.name}</div>
+                          <div className="text-xs text-gray-500">{msg.email}</div>
+                          <div className="text-xs text-gray-500">{msg.phone}</div>
+                        </td>
+                        <td className="p-4 text-sm">{msg.subject}</td>
+                        <td className="p-4 text-sm max-w-xs truncate" title={msg.message}>{msg.message}</td>
+                        <td className="p-4 whitespace-nowrap">
+                          <button onClick={() => handleDeleteMessage(msg.id)} className="text-red-600 hover:text-red-900" title="Apagar"><FaTrash /></button>
+                        </td>
+                      </tr>
+                    ))}
+                    {contactMessages.length === 0 && (
+                      <tr><td colSpan="5" className="p-8 text-center text-gray-500">Nenhuma mensagem encontrada.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+             </div>
           </div>
         )}
       </div>

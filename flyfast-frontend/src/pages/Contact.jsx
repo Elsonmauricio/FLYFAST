@@ -1,7 +1,48 @@
-import React from 'react';
-import ContactForm from '../components/ContactForm';
+import React, { useState } from 'react';
+import { FaPaperPlane, FaSpinner, FaCheckCircle, FaExclamationCircle } from 'react-icons/fa';
 
 const Contact = () => {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    subject: '',
+    message: ''
+  });
+  const [status, setStatus] = useState({ type: '', message: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setStatus({ type: '', message: '' });
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setStatus({ type: 'success', message: 'Mensagem enviada com sucesso! Entraremos em contacto brevemente.' });
+        setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+      } else {
+        setStatus({ type: 'error', message: data.error || 'Erro ao enviar mensagem.' });
+      }
+    } catch (error) {
+      setStatus({ type: 'error', message: 'Erro de conexão. Verifique a sua internet.' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
@@ -21,7 +62,94 @@ const Contact = () => {
 
       {/* Contact Form & Info */}
       <div className="container mx-auto px-4 py-12">
-        <ContactForm />
+        <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8">
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">Envie-nos uma mensagem</h2>
+          
+          {status.message && (
+            <div className={`p-4 rounded-lg mb-6 flex items-center gap-3 ${
+              status.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+            }`}>
+              {status.type === 'success' ? <FaCheckCircle /> : <FaExclamationCircle />}
+              <p>{status.message}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Nome Completo</label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-flyfast-blue focus:ring-2 focus:ring-blue-100 outline-none transition"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-flyfast-blue focus:ring-2 focus:ring-blue-100 outline-none transition"
+                  required
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Telefone (Opcional)</label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-flyfast-blue focus:ring-2 focus:ring-blue-100 outline-none transition"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Assunto</label>
+                <input
+                  type="text"
+                  name="subject"
+                  value={formData.subject}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-flyfast-blue focus:ring-2 focus:ring-blue-100 outline-none transition"
+                  required
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">Mensagem</label>
+              <textarea
+                name="message"
+                value={formData.message}
+                onChange={handleChange}
+                rows="5"
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-flyfast-blue focus:ring-2 focus:ring-blue-100 outline-none transition"
+                required
+              ></textarea>
+            </div>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full bg-flyfast-blue text-white font-bold py-4 rounded-lg hover:bg-blue-800 transition flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? (
+                <>
+                  <FaSpinner className="animate-spin" /> A enviar...
+                </>
+              ) : (
+                <>
+                  <FaPaperPlane /> Enviar Mensagem
+                </>
+              )}
+            </button>
+          </form>
+        </div>
       </div>
 
       {/* Map Section */}
@@ -89,7 +217,9 @@ const Contact = () => {
                   <div>
                     <p className="font-semibold">Endereço</p>
                     <p className="text-gray-600">
-                      Rua João Villaret 7, Queluz 2745-285 <br />
+
+                      Centro Comercial Quinta Nova, Loja 2. 
+                      Rua de Alves Redol 1, 2675-285 Odivelas <br />
                       Lisboa, Portugal
                     </p>
                   </div>
@@ -114,7 +244,7 @@ const Contact = () => {
                   height="100%" 
                   frameBorder="0" 
                   scrolling="no" 
-                  src="https://maps.google.com/maps?q=Rua+Jo%C3%A3o+Villaret+7,+Queluz+2745-285&t=&z=15&ie=UTF8&iwloc=&output=embed"
+                  src="https://maps.google.com/maps?q=Rua+de+Alves+Redol+1,+2675-285+Odivelas&t=&z=15&ie=UTF8&iwloc=&output=embed"
                 ></iframe>
               </div>
             </div>

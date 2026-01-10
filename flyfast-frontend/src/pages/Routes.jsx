@@ -13,6 +13,45 @@ const Routes = () => {
   const [routes, setRoutes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Estado para Tabela de Preços Dinâmica
+  const [pricing, setPricing] = useState({
+    pricePerKg: 12.99,
+    specificArticles: [
+      { article: 'Perfumes/Duplos', price: '7€ | 10€ KG', tax: '35% da fatura' },
+      { article: 'Cartões Visa', price: '15 €', tax: '-' },
+      { article: 'Documentos', price: '15 €', tax: '-' },
+      { article: 'Telemóveis', price: '20 €', tax: '23% da fatura' },
+      { article: 'Computadores', price: '35 €', tax: '23% da fatura' },
+      { article: 'Artigos de Ouro', price: '15 €', tax: '-' },
+      { article: 'Playstation 4/5', price: '45 €', tax: '23% da fatura' }
+    ],
+    weightArticles: [
+      { article: 'Roupas', tax: '23% da fatura' },
+      { article: 'Calçados', tax: '23% da fatura' },
+      { article: 'Cosméticos', tax: '35% da fatura' },
+      { article: 'TV\'s', tax: '23% da fatura' },
+      { article: 'Eletrodomésticos', tax: '23% da fatura' },
+      { article: 'Máquinas Pesadas', tax: '23% da fatura' }
+    ]
+  });
+
+  // Buscar preços ao carregar
+  useEffect(() => {
+    const fetchPricing = async () => {
+      try {
+        // Nota: Certifica-te que crias esta rota pública no backend
+        const response = await fetch('/api/pricing'); 
+        if (response.ok) {
+          const data = await response.json();
+          setPricing(data);
+        }
+      } catch (err) {
+        console.error('Erro ao carregar preços:', err);
+      }
+    };
+    fetchPricing();
+  }, []);
 
   // Estados para o Modal de Reserva
   const [selectedRoute, setSelectedRoute] = useState(null);
@@ -244,7 +283,10 @@ const Routes = () => {
   
   <div className="mb-6 text-center">
     <p className="text-lg font-semibold text-flyfast-blue">
-      Preço base: <span className="text-2xl">12.99€ POR KG</span>
+      Preço base: <span className="text-2xl">
+        {/* Tenta formatar se for número, senão mostra como está */}
+        {typeof pricing.pricePerKg === 'number' ? `${pricing.pricePerKg}€` : pricing.pricePerKg} POR KG
+      </span>
     </p>
     <p className="text-sm text-gray-600 mt-1">
       FLYFAST - PRESTAÇÃO DE SERVIÇOS, LDA
@@ -262,43 +304,7 @@ const Routes = () => {
         </tr>
       </thead>
       <tbody>
-        {[
-          {
-            article: 'Perfumes/Duplos',
-            price: '7€ | 10€ KG',
-            tax: '35% da fatura'
-          },
-          {
-            article: 'Cartões Visa',
-            price: '15 €',
-            tax: '-'
-          },
-          {
-            article: 'Documentos',
-            price: '15 €',
-            tax: '-'
-          },
-          {
-            article: 'Telemóveis',
-            price: '20 €',
-            tax: '23% da fatura'
-          },
-          {
-            article: 'Computadores',
-            price: '35 €',
-            tax: '23% da fatura'
-          },
-          {
-            article: 'Artigos de Ouro',
-            price: '15 €',
-            tax: '-'
-          },
-          {
-            article: 'Playstation 4/5',
-            price: '45 €',
-            tax: '23% da fatura'
-          }
-        ].map((row, index) => (
+        {pricing.specificArticles.map((row, index) => (
           <tr key={index} className="border-b hover:bg-gray-50">
             <td className="p-4 font-semibold">{row.article}</td>
             <td className="p-4 text-flyfast-blue font-bold">{row.price}</td>
@@ -310,7 +316,7 @@ const Routes = () => {
   </div>
 
   <div className="overflow-x-auto">
-    <h3 className="text-xl font-bold mb-4 text-center">👕 Artigos por Peso (12.99€/kg)</h3>
+    <h3 className="text-xl font-bold mb-4 text-center">👕 Artigos por Peso ({pricing.pricePerKg}€/kg)</h3>
     <table className="w-full">
       <thead>
         <tr className="bg-gray-100">
@@ -319,14 +325,7 @@ const Routes = () => {
         </tr>
       </thead>
       <tbody>
-        {[
-          { article: 'Roupas', tax: '23% da fatura' },
-          { article: 'Calçados', tax: '23% da fatura' },
-          { article: 'Cosméticos', tax: '35% da fatura' },
-          { article: 'TV\'s', tax: '23% da fatura' },
-          { article: 'Eletrodomésticos', tax: '23% da fatura' },
-          { article: 'Máquinas Pesadas', tax: '23% da fatura' }
-        ].map((row, index) => (
+        {pricing.weightArticles.map((row, index) => (
           <tr key={index} className="border-b hover:bg-gray-50">
             <td className="p-4 font-semibold">{row.article}</td>
             <td className="p-4">{row.tax}</td>

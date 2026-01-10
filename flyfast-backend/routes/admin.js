@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
+const { db } = require('../config/firebase');
 // const { adminAuth } = require('../middleware/auth');
 const { uploadSingle } = require('../middleware/upload');
 const { isAuthenticated, hasRole } = require('../middleware/authMiddleware');
@@ -85,5 +86,86 @@ router.delete('/api-keys/:id', isAuthenticated, hasRole(['admin']), adminControl
 // Notificações admin
 router.get('/notifications', isAuthenticated, hasRole(['admin']), adminController.getAdminNotifications);
 router.put('/notifications/:id', isAuthenticated, hasRole(['admin']), adminController.markAdminNotificationAsRead);
+
+// --- GESTÃO DE PREÇOS (Inline para acesso direto ao DB) ---
+router.get('/pricing', isAuthenticated, hasRole(['admin']), async (req, res) => {
+  try {
+    const doc = await db.collection('settings').doc('pricing').get();
+    // Valores padrão se não existir configuração
+    res.json(doc.exists ? doc.data() : { pricePerKg: 13000, serviceFee: 0, insuranceRate: 0 });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao buscar tabela de preços' });
+  }
+});
+
+router.put('/pricing', isAuthenticated, hasRole(['admin']), async (req, res) => {
+  try {
+    const { uid, email } = req.user;
+    const newPricing = req.body;
+    
+    // 1. Buscar preço antigo para histórico
+    const oldDoc = await db.collection('settings').doc('pricing').get();
+    const oldPricing = oldDoc.exists ? oldDoc.data() : null;
+
+    // 2. Atualizar
+    await db.collection('settings').doc('pricing').set(newPricing, { merge: true });
+
+    // 3. Criar Log de Auditoria
+    await db.collection('audit_logs').add({
+      action: 'UPDATE_PRICING',
+      performedBy: uid,
+      performedByEmail: email,
+      details: {
+        oldValue: oldPricing,
+        newValue: newPricing
+      },
+      timestamp: new Date().toISOString(),
+      resource: 'pricing'
+    });
+
+    res.json({ message: 'Tabela de preços atualizada com sucesso' });
+  } catch (error) {
+    console.error('Erro ao atualizar preços:', error);
+    res.status(500).json({ error: 'Erro ao atualizar preços' });
+  }
+});
+
+// Rota para buscar histórico de preços
+router.get('/pricing/logs', isAuthenticated, hasRole(['admin']), async (req, res) => {
+  try {
+    const snapshot = await db.collection('audit_logs')
+      .where('resource', '==', 'pricing')
+      .orderBy('timestamp', 'desc')
+      .limit(20)
+      .get();
+    
+    const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    res.json(logs);
+  } catch (error) {
+    console.error('Erro ao buscar logs de preços:', error);
+    res.status(500).json({ error: 'Erro ao buscar histórico' });
+  }
+});
+
+// --- GESTÃO DE MENSAGENS DE CONTACTO ---
+router.get('/contact-requests', isAuthenticated, hasRole(['admin']), async (req, res) => {
+  try {
+    const snapshot = await db.collection('contactRequests').orderBy('createdAt', 'desc').get();
+    const requests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    res.json(requests);
+  } catch (error) {
+    console.error('Erro ao buscar mensagens:', error);
+    res.status(500).json({ error: 'Erro ao buscar mensagens' });
+  }
+});
+
+router.delete('/contact-requests/:id', isAuthenticated, hasRole(['admin']), async (req, res) => {
+  try {
+    await db.collection('contactRequests').doc(req.params.id).delete();
+    res.json({ message: 'Mensagem apagada com sucesso' });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao apagar mensagem' });
+  }
+});
 
 module.exports = router;

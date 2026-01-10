@@ -13,6 +13,7 @@ const upload = multer({
 
 // POST /api/personal-shopper/requests (Renomeado de /create para coincidir com o frontend)
 router.post('/requests', upload.single('attachment'), async (req, res) => {
+  console.log('Recebido pedido POST /requests. Body:', req.body);
   try {
     const { productName, productLink, details, budget, deliveryCountry, name, email, phone } = req.body;
     

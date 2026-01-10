@@ -15,8 +15,9 @@ const Header = () => {
     <header className="bg-flyfast-blue text-white shadow-md sticky top-0 z-50">
       <div className="container mx-auto px-4 py-4 flex justify-between items-center">
         {/* Logo */}
-        <Link to="/" className="text-2xl font-bold text-white flex items-center">
-          <span className="text-flyfast-yellow mr-1">FLY</span>FAST
+        <Link to="/" className="text-2xl font-bold text-white flex items-center gap-2">
+          <img src="/logo.png" alt="Flyfast" className="w-10 h-10 rounded-full object-cover border-2 border-white" />
+          <span><span className="text-flyfast-yellow">FLY</span>FAST</span>
         </Link>
 
         {/* Desktop Navigation */}

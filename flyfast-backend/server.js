@@ -14,12 +14,17 @@ const { db, auth } = require('./config/firebase');
 const authRoutes = require('./routes/auth');
 const shipmentRoutes = require('./routes/shipments');
 const accountRoutes = require('./routes/account');
+// Importar rotas do Personal Shopper
 const personalShopperRoutes = require('./routes/personalShopper');
 const notificationRoutes = require('./routes/notifications');
 const adminRoutes = require('./routes/admin');
 const userRoutes = require('./routes/users');
 const scheduleRoutes = require('./routes/schedules');
 const trackingRoutes = require('./routes/tracking');
+const contactRoutes = require('./routes/contact');
+// No server.js
+const pricingRoutes = require('./routes/pricing');
+
 // const shopifyRoutes = require('./routes/shopify');
 
 // Inicializar app
@@ -67,12 +72,15 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth', authRoutes);
 app.use('/api/account', accountRoutes);
 app.use('/api/shipments', shipmentRoutes);
+// Registar rotas do Personal Shopper
 app.use('/api/personal-shopper', personalShopperRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/schedules', scheduleRoutes);
 app.use('/api/tracking', trackingRoutes);
+app.use('/api/contact', contactRoutes);
+app.use('/api/pricing', pricingRoutes);
 // app.use('/api/shopify', shopifyRoutes);
 
 // Rota de saúde
