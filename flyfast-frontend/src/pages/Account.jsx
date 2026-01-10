@@ -311,12 +311,6 @@ const Account = () => {
       {/* Account Header */}
       <div className="bg-gradient-to-r from-flyfast-blue to-blue-800 text-white py-12">
         <div className="container mx-auto px-4">
-          <div className="mb-6">
-            <Link to="/" className="inline-flex items-center gap-2 text-white/80 hover:text-white transition-colors">
-              <img src="/logo.png" alt="Flyfast" className="w-6 h-6 rounded-full border border-white/50 object-cover" />
-              <span className="font-medium text-sm">Voltar à Home</span>
-            </Link>
-          </div>
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center space-x-4 mb-6 md:mb-0">
               <div className="w-20 h-20 bg-flyfast-yellow rounded-full flex items-center justify-center">
