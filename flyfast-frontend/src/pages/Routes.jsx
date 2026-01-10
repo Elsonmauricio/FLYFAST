@@ -304,7 +304,7 @@ const Routes = () => {
         </tr>
       </thead>
       <tbody>
-        {pricing.specificArticles.map((row, index) => (
+        {(pricing.specificArticles || []).map((row, index) => (
           <tr key={index} className="border-b hover:bg-gray-50">
             <td className="p-4 font-semibold">{row.article}</td>
             <td className="p-4 text-flyfast-blue font-bold">{row.price}</td>
@@ -325,7 +325,7 @@ const Routes = () => {
         </tr>
       </thead>
       <tbody>
-        {pricing.weightArticles.map((row, index) => (
+        {(pricing.weightArticles || []).map((row, index) => (
           <tr key={index} className="border-b hover:bg-gray-50">
             <td className="p-4 font-semibold">{row.article}</td>
             <td className="p-4">{row.tax}</td>

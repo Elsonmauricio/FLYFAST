@@ -5,6 +5,7 @@ import { FaUsers, FaBox, FaChartLine, FaSpinner, FaTrash, FaEdit, FaPlus, FaChev
 import { AlertProvider, useAlert } from '../contexts/AlertContext';
 import GlobalAlert from '../components/GlobalAlert';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import FlyfastLogo from '../assets/flyfast-logo.jpg';
 
 const AdminContent = () => {
   const { authState } = useAuth();
@@ -728,7 +729,7 @@ const AdminContent = () => {
       {/* Sidebar */}
       <div className="w-full md:w-64 bg-flyfast-blue text-white p-6">
         <h1 className="text-2xl font-bold mb-10 flex items-center gap-2">
-           <img src="/logo.png" alt="Logo" className="w-8 h-8 rounded-full border-2 border-white object-cover" />
+           <img src={FlyfastLogo} alt="Logo" className="w-8 h-8 rounded-full border-2 border-white object-cover" />
            <span>Admin</span>
         </h1>
         <nav className="space-y-2 flex flex-row md:flex-col overflow-x-auto md:overflow-visible">
