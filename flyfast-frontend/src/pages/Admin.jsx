@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { FaUsers, FaBox, FaChartLine, FaSpinner, FaTrash, FaEdit, FaPlus, FaChevronLeft, FaChevronRight, FaEnvelope, FaFileDownload, FaShoppingBag, FaWhatsapp, FaEye, FaPlane, FaBan, FaTags, FaSave, FaHistory } from 'react-icons/fa';
+import { FaUsers, FaBox, FaChartLine, FaSpinner, FaTrash, FaEdit, FaPlus, FaChevronLeft, FaChevronRight, FaEnvelope, FaFileDownload, FaShoppingBag, FaWhatsapp, FaEye, FaPlane, FaBan, FaTags, FaSave, FaHistory, FaSync } from 'react-icons/fa';
 import { AlertProvider, useAlert } from '../contexts/AlertContext';
 import GlobalAlert from '../components/GlobalAlert';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -131,7 +131,7 @@ const AdminContent = () => {
     setIsLoading(true);
     try {
       const cursor = userCursors[pageIndex];
-      let url = `/api/admin/users?limit=10`;
+      let url = `/api/admin/users?limit=1000`;
       if (cursor) {
         url += `&startAfter=${cursor}`;
       }
@@ -141,6 +141,7 @@ const AdminContent = () => {
       });
       if (response.ok) {
         const data = await response.json();
+        console.log(`[Frontend] Recebidos ${data.users.length} utilizadores do backend.`);
         setUsers(data.users);
         setHasMoreUsers(!!data.lastVisible);
         
@@ -202,7 +203,7 @@ const AdminContent = () => {
     setIsLoading(true);
     try {
       const cursor = routesCursors[pageIndex];
-      let url = `/api/schedules?limit=5`; // Limite de 5 por página
+      let url = `/api/schedules`;
       if (cursor) {
         url += `&startAfter=${cursor}`;
       }
@@ -318,7 +319,10 @@ const AdminContent = () => {
       fetchPersonalShopperRequests();
       fetchShipments(); // Carregar envios para gerar o gráfico
     }
-    if (activeTab === 'users') fetchUsers(0); // Carrega a primeira página
+    if (activeTab === 'users') {
+      fetchUsers(0); // Carrega a primeira página
+      fetchStats(); // Garante que temos o total de utilizadores atualizado
+    }
     if (activeTab === 'shipments') fetchShipments();
     if (activeTab === 'personalShopper') fetchPersonalShopperRequests();
     if (activeTab === 'routes') fetchRoutes(0);
@@ -489,7 +493,7 @@ const AdminContent = () => {
     if (!editingShipment) return;
 
     try {
-      const response = await fetch(`/api/admin/shipments/${editingShipment.id}`, {
+      const response = await fetch(`/api/shipments/${editingShipment.id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${authState.token}`,
@@ -863,6 +867,21 @@ const AdminContent = () => {
         {/* Users View */}
         {activeTab === 'users' && (
           <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
+              <h3 className="font-bold text-gray-700">Gerir Utilizadores</h3>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => { fetchUsers(0); fetchStats(); }} 
+                  className="text-gray-500 hover:text-flyfast-blue transition" 
+                  title="Forçar Atualização"
+                >
+                  <FaSync />
+                </button>
+                <span className="bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-full">
+                  Total Registado: {stats?.totalUsers || '...'}
+                </span>
+              </div>
+            </div>
             
             {/* Modal de Detalhes do Utilizador */}
             {isUserDetailsModalOpen && selectedUser && (

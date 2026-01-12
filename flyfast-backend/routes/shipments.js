@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { db, auth, FieldValue } = require('../config/firebase');
+const { sendShipmentStatusUpdate } = require('../lib/email');
 
 // Middleware de autenticação
 const authenticate = async (req, res, next) => {
@@ -155,6 +156,55 @@ router.post('/:id/cancel', authenticate, async (req, res) => {
     res.json({ message: 'Envio cancelado' });
   } catch (error) {
     res.status(500).json({ error: 'Erro ao cancelar' });
+  }
+});
+
+// PUT /:id - Atualizar envio (Admin)
+router.put('/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, currentLocation, from, to } = req.body;
+    
+    // Verificar se é admin
+    const userDoc = await db.collection('users').doc(req.user.uid).get();
+    if (!userDoc.exists || userDoc.data().role !== 'admin') {
+      return res.status(403).json({ error: 'Acesso não autorizado' });
+    }
+
+    const shipmentRef = db.collection('shipments').doc(id);
+    const doc = await shipmentRef.get();
+
+    if (!doc.exists) return res.status(404).json({ error: 'Envio não encontrado' });
+    
+    const oldStatus = doc.data().status;
+    const updateData = { status, currentLocation, from, to };
+
+    // Atualizar histórico se necessário
+    if (status !== oldStatus || currentLocation !== doc.data().currentLocation) {
+      updateData.trackingHistory = FieldValue.arrayUnion({
+        status,
+        location: currentLocation,
+        date: new Date().toISOString()
+      });
+    }
+
+    await shipmentRef.update(updateData);
+
+    // Enviar notificação por email se o estado mudou
+    if (status && status !== oldStatus) {
+      const clientUser = await db.collection('users').doc(doc.data().userId).get();
+      const clientData = clientUser.data();
+      
+      if (clientData && clientData.email) {
+        sendShipmentStatusUpdate(clientData.email, clientData.name || 'Cliente', id, status, currentLocation)
+          .catch(err => console.error('Erro ao enviar email:', err));
+      }
+    }
+
+    res.json({ message: 'Envio atualizado com sucesso' });
+  } catch (error) {
+    console.error('Erro ao atualizar envio:', error);
+    res.status(500).json({ error: 'Erro ao atualizar envio' });
   }
 });
 

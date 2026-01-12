@@ -351,14 +351,28 @@ class AuthController {
   // Admin: Obter todos os usuários
   async getAllUsers(req, res) {
     try {
-      const { pageToken, limit = 20 } = req.query;
+      const { pageToken, limit } = req.query;
 
-      // Listar utilizadores do Firebase Auth
-      const listUsersResult = await auth.listUsers(parseInt(limit), pageToken);
+      let allUsers = [];
+      let nextPageToken = pageToken;
+
+      // Se limit for fornecido, usa paginação. Se não, busca TODOS (loop).
+      if (limit) {
+        const listUsersResult = await auth.listUsers(parseInt(limit), pageToken);
+        allUsers = listUsersResult.users;
+        nextPageToken = listUsersResult.pageToken;
+      } else {
+        // Loop para buscar todos os utilizadores (limite de 1000 por batch do Firebase)
+        do {
+          const result = await auth.listUsers(1000, nextPageToken);
+          allUsers = allUsers.concat(result.users);
+          nextPageToken = result.pageToken;
+        } while (nextPageToken);
+      }
       
       // Opcional: enriquecer com dados do Firestore.
       // Para uma lista simples, os dados do Auth podem ser suficientes.
-      const users = listUsersResult.users.map(userRecord => ({
+      const users = allUsers.map(userRecord => ({
         uid: userRecord.uid,
         email: userRecord.email,
         name: userRecord.displayName,
@@ -369,15 +383,13 @@ class AuthController {
         lastLogin: userRecord.metadata.lastSignInTime,
       }));
 
-      // A paginação do Firebase é baseada em `pageToken`
-      const nextPageToken = listUsersResult.pageToken;
-
       res.json({
         success: true,
         users,
         pagination: {
-          limit: parseInt(limit),
+          limit: limit ? parseInt(limit) : users.length,
           nextPageToken: nextPageToken || null,
+          total: users.length
         }
       });
 

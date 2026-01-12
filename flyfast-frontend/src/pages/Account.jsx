@@ -38,6 +38,7 @@ const Account = () => {
   const [profileForm, setProfileForm] = useState({
     name: userData.name || '',
     phone: userData.phone || '',
+    email: userData.email || '',
   });
   const [preferences, setPreferences] = useState(userData.preferences || {
     emailUpdates: true,
@@ -76,7 +77,7 @@ const Account = () => {
   // Atualiza o formulário quando os dados do utilizador carregam
   useEffect(() => {
     if (userData) {
-      setProfileForm({ name: userData.name || '', phone: userData.phone || '' });
+      setProfileForm({ name: userData.name || '', phone: userData.phone || '', email: userData.email || '' });
       if (userData.preferences) setPreferences(userData.preferences);
     }
   }, [userData]);
@@ -400,9 +401,9 @@ const Account = () => {
                       </label>
                       <input
                         type="email"
-                        value={userData.email || ''}
-                        className="input-field bg-gray-100 cursor-not-allowed"
-                        disabled
+                        value={profileForm.email}
+                        onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                        className="input-field"
                       />
                     </div>
                     <div>

@@ -54,7 +54,7 @@ const BookingModal = ({ isOpen, onClose, route, onSubmit, isLoading }) => {
               required
             />
             <p className="text-xs text-gray-500 mt-1">
-              Preço estimado: {weight ? (parseFloat(weight) * parseFloat(route.price.replace(/[^0-9.]/g, ''))).toLocaleString('pt-AO', {style: 'currency', currency: 'AOA'}) : '0 AOA'}
+              Preço estimado: {weight ? (parseFloat(weight) * parseFloat(route.price.replace(/[^0-9.]/g, ''))).toLocaleString('pt-PT', {style: 'currency', currency: 'EUR'}) : '0 €'}
             </p>
           </div>
 

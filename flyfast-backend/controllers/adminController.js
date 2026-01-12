@@ -26,10 +26,15 @@ class AdminController {
   // Usuários
   async getUsers(req, res) {
     try {
+      // Headers mais fortes para evitar cache do navegador (304) e forçar atualização
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+
       const limit = parseInt(req.query.limit) || 10;
       const startAfter = req.query.startAfter;
 
-      let query = db.collection('users').orderBy('email'); // Ordenação necessária para paginação
+      let query = db.collection('users'); // Sem ordenação específica para listar TODOS os utilizadores (mesmo sem createdAt ou email)
 
       if (startAfter) {
         const doc = await db.collection('users').doc(startAfter).get();
@@ -39,6 +44,10 @@ class AdminController {
       }
 
       const snapshot = await query.limit(limit).get();
+      
+      // Log para debug: Verifique no terminal se aqui aparece o número correto (ex: 13)
+      console.log(`[Admin] GetUsers: A enviar ${snapshot.size} utilizadores.`);
+
       const users = [];
       snapshot.forEach(doc => users.push({ id: doc.id, ...doc.data() }));
       
