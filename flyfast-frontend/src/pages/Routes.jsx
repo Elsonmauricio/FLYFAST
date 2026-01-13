@@ -61,7 +61,8 @@ const Routes = () => {
   useEffect(() => {
     const fetchRoutes = async () => {
       try {
-        const response = await fetch('/api/schedules');
+        // Adiciona timestamp (?_t=...) para evitar que o navegador use dados antigos (cache)
+        const response = await fetch(`/api/schedules?_t=${new Date().getTime()}`);
         if (!response.ok) {
           throw new Error('Falha ao carregar as rotas.');
         }
@@ -91,13 +92,22 @@ const Routes = () => {
   const handleBookingSubmit = async (bookingData) => {
     setIsBookingLoading(true);
     try {
+      // Juntar os dados do formulário (peso/itens) com os dados da rota selecionada
+      const payload = {
+        ...bookingData,
+        scheduleId: selectedRoute.id, // FUNDAMENTAL: O backend precisa disto para descontar a capacidade
+        from: selectedRoute.from,
+        to: selectedRoute.to,
+        date: selectedRoute.date
+      };
+
       const response = await fetch('/api/shipments', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${authState.token}`
         },
-        body: JSON.stringify(bookingData)
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {

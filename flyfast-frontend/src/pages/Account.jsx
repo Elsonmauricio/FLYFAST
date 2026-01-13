@@ -113,23 +113,26 @@ const Account = () => {
     }
   }, [activeTab, authState.token]);
 
+  // Função para carregar rotas (definida fora do useEffect para ser reutilizável)
+  const fetchRoutes = async () => {
+    setIsLoadingRoutes(true);
+    try {
+      // Adiciona timestamp para evitar cache
+      const response = await fetch(`/api/schedules?_t=${new Date().getTime()}`);
+      if (response.ok) {
+        const data = await response.json();
+        setRoutes(data);
+      }
+    } catch (err) {
+      console.error('Erro ao carregar rotas');
+    } finally {
+      setIsLoadingRoutes(false);
+    }
+  };
+
   // Fetch de rotas quando a aba é ativada
   useEffect(() => {
     if (activeTab === 'routes') {
-      const fetchRoutes = async () => {
-        setIsLoadingRoutes(true);
-        try {
-          const response = await fetch('/api/schedules');
-          if (response.ok) {
-            const data = await response.json();
-            setRoutes(data);
-          }
-        } catch (err) {
-          console.error('Erro ao carregar rotas');
-        } finally {
-          setIsLoadingRoutes(false);
-        }
-      };
       fetchRoutes();
     }
   }, [activeTab]);
@@ -227,13 +230,22 @@ const Account = () => {
   const handleBookingSubmit = async (bookingData) => {
     setIsBookingLoading(true);
     try {
+      // Juntar os dados do formulário com os dados da rota selecionada
+      const payload = {
+        ...bookingData,
+        scheduleId: selectedRoute.id,
+        from: selectedRoute.from,
+        to: selectedRoute.to,
+        date: selectedRoute.date
+      };
+
       const response = await fetch('/api/shipments', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${authState.token}`
         },
-        body: JSON.stringify(bookingData)
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
@@ -243,6 +255,7 @@ const Account = () => {
 
       alert('Reserva efetuada com sucesso! Verifique o seu email.');
       setIsBookingModalOpen(false);
+      fetchRoutes(); // Atualiza a lista de rotas imediatamente para mostrar a nova capacidade
     } catch (err) {
       alert(err.message);
     } finally {
@@ -322,7 +335,7 @@ const Account = () => {
               <div>
                 <h1 className="text-3xl font-bold capitalize">{userData.name || 'Utilizador'}</h1>
                 <p className="text-flyfast-yellow">
-                  Cliente FLYFAST desde {userData.memberSince || '2024'}
+                  Cliente FLYFAST desde {userData.memberSince || (userData.createdAt ? new Date(userData.createdAt).toLocaleDateString('pt-PT') : '2024')}
                 </p>
               </div>
             </div>
@@ -423,9 +436,10 @@ const Account = () => {
                       </label>
                       <input
                         type="text"
-                        defaultValue={userData.memberSince}
+                        value={userData.memberSince || (userData.createdAt ? new Date(userData.createdAt).toLocaleDateString('pt-PT') : '2024')}
                         className="input-field bg-gray-100 cursor-not-allowed"
                         disabled
+                        readOnly
                       />
                     </div>
                   </div>

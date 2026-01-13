@@ -13,12 +13,27 @@ const transporter = nodemailer.createTransport({
 /**
  * Função base para envio de emails
  */
-const sendEmail = async (options) => {
+const sendEmail = async (to, subject, html) => {
+  // Normalizar argumentos: suporta tanto objeto de opções quanto argumentos separados
+  let options;
+  if (typeof to === 'object' && to !== null && to.to) {
+    options = to;
+  } else {
+    options = { to, subject, html };
+  }
+
   // Verificação de segurança para não crashar se não houver credenciais
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
     console.warn('⚠️ AVISO: EMAIL_USER ou EMAIL_PASS não configurados no .env.');
     console.log('📧 Simulação de envio de email para:', options.to);
     return;
+  }
+
+  // DEBUG: Verificar problemas comuns nas credenciais (Espaços em branco)
+  if (process.env.EMAIL_PASS.trim().length !== process.env.EMAIL_PASS.length) {
+    console.error('\n❌ ERRO CRÍTICO NO .ENV:');
+    console.error('   A sua senha (EMAIL_PASS) tem espaços em branco no início ou no fim!');
+    console.error('   Por favor, edite o ficheiro .env e remova os espaços.\n');
   }
 
   const mailOptions = {
@@ -34,7 +49,17 @@ const sendEmail = async (options) => {
     console.log('✅ Email enviado com sucesso: %s', info.messageId);
     return info;
   } catch (error) {
-    console.error('❌ Erro ao enviar email:', error);
+    console.error('❌ Erro técnico ao enviar email:', error.message);
+
+    // Diagnóstico amigável para erro de senha (535)
+    if (error.code === 'EAUTH' || (error.response && error.response.includes('535'))) {
+        console.error('\n🛑 SOLUÇÃO PARA O ERRO DE EMAIL (535):');
+        console.error('   1. A senha no ficheiro .env ESTÁ INCORRETA ou EXPIROU.');
+        console.error('   2. Não use a sua senha do Gmail. Use uma "Senha de Aplicação" de 16 letras.');
+        console.error('   3. Gere uma nova aqui: https://myaccount.google.com/apppasswords');
+        console.error('   4. Atualize o ficheiro .env e REINICIE O SERVIDOR.\n');
+    }
+
     // Não lançamos o erro para não parar o processo de auth, mas logamos
     return null;
   }

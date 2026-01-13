@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { FaUsers, FaBox, FaChartLine, FaSpinner, FaTrash, FaEdit, FaPlus, FaChevronLeft, FaChevronRight, FaEnvelope, FaFileDownload, FaShoppingBag, FaWhatsapp, FaEye, FaPlane, FaBan, FaTags, FaSave, FaHistory, FaSync } from 'react-icons/fa';
+import { FaUsers, FaBox, FaChartLine, FaSpinner, FaTrash, FaEdit, FaPlus, FaChevronLeft, FaChevronRight, FaEnvelope, FaFileDownload, FaShoppingBag, FaWhatsapp, FaEye, FaPlane, FaBan, FaTags, FaSave, FaHistory, FaSync, FaCog, FaList, FaExclamationCircle } from 'react-icons/fa';
 import { AlertProvider, useAlert } from '../contexts/AlertContext';
 import GlobalAlert from '../components/GlobalAlert';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -23,7 +23,9 @@ const AdminContent = () => {
     userId: '',
     from: 'Luanda',
     to: 'Lisboa',
-    status: 'Pendente'
+    status: 'Pendente',
+    weight: '',
+    date: ''
   });
   const { showAlert } = useAlert();
 
@@ -60,6 +62,12 @@ const AdminContent = () => {
   // Estados para edição de Rota
   const [editingRoute, setEditingRoute] = useState(null);
   const [isEditRouteModalOpen, setIsEditRouteModalOpen] = useState(false);
+
+  // Estados para visualização de reservas da rota
+  const [viewingRoute, setViewingRoute] = useState(null);
+  const [isRouteShipmentsModalOpen, setIsRouteShipmentsModalOpen] = useState(false);
+  const [routeShipments, setRouteShipments] = useState([]);
+  const [isLoadingRouteShipments, setIsLoadingRouteShipments] = useState(false);
 
   // Estados de Paginação de Rotas
   const [routesPage, setRoutesPage] = useState(0);
@@ -203,12 +211,16 @@ const AdminContent = () => {
     setIsLoading(true);
     try {
       const cursor = routesCursors[pageIndex];
-      let url = `/api/schedules`;
+      // Adiciona timestamp para evitar cache do navegador e garante sintaxe correta
+      let url = `/api/schedules?_t=${new Date().getTime()}`;
       if (cursor) {
         url += `&startAfter=${cursor}`;
       }
 
-      const response = await fetch(url);
+      // Adiciona headers de autenticação para garantir consistência
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${authState.token}` }
+      });
       if (response.ok) {
         const data = await response.json();
         // O backend agora retorna { schedules, lastVisible } se usarmos limit
@@ -323,7 +335,10 @@ const AdminContent = () => {
       fetchUsers(0); // Carrega a primeira página
       fetchStats(); // Garante que temos o total de utilizadores atualizado
     }
-    if (activeTab === 'shipments') fetchShipments();
+    if (activeTab === 'shipments') {
+      fetchShipments();
+      fetchRoutes(); // Carregar rotas para poder validar a capacidade
+    }
     if (activeTab === 'personalShopper') fetchPersonalShopperRequests();
     if (activeTab === 'routes') fetchRoutes(0);
     if (activeTab === 'pricing') fetchPricing();
@@ -434,6 +449,21 @@ const AdminContent = () => {
 
   const handleCreateShipment = async (e) => {
     e.preventDefault();
+
+    // --- VALIDAÇÃO DE CAPACIDADE (FRONTEND) ---
+    if (newShipment.date && newShipment.weight) {
+      const selectedRoute = routes.find(r => 
+        r.from === newShipment.from && 
+        r.to === newShipment.to && 
+        r.date === newShipment.date
+      );
+      
+      if (selectedRoute && parseFloat(selectedRoute.available) < parseFloat(newShipment.weight)) {
+        showAlert('error', `Capacidade insuficiente na rota de ${newShipment.date}. Disponível: ${selectedRoute.available}kg`);
+        return; // Impede o envio
+      }
+    }
+
     try {
       const response = await fetch('/api/admin/shipments', {
         method: 'POST',
@@ -447,7 +477,8 @@ const AdminContent = () => {
       if (response.ok) {
         setIsShipmentFormOpen(false);
         fetchShipments();
-        setNewShipment({ userId: '', from: 'Luanda', to: 'Lisboa', status: 'Pendente' });
+        fetchRoutes(); // Atualiza as rotas para refletir a nova capacidade imediatamente
+        setNewShipment({ userId: '', from: 'Luanda', to: 'Lisboa', status: 'Pendente', weight: '', date: '' });
         showAlert('success', 'Envio criado com sucesso!');
       } else {
         const data = await response.json();
@@ -503,7 +534,9 @@ const AdminContent = () => {
             status: editingShipment.status,
             currentLocation: editingShipment.currentLocation,
             from: editingShipment.from,
-            to: editingShipment.to
+            to: editingShipment.to,
+            weight: editingShipment.weight,
+            items: editingShipment.items
         })
       });
       
@@ -626,6 +659,32 @@ const AdminContent = () => {
     }
   };
 
+  const handleViewRouteShipments = async (route) => {
+    setViewingRoute(route);
+    setRouteShipments([]); // Limpar dados anteriores
+    setIsRouteShipmentsModalOpen(true);
+    setIsLoadingRouteShipments(true);
+
+    try {
+      const response = await fetch(`/api/admin/schedules/${route.id}/shipments`, {
+        headers: { 'Authorization': `Bearer ${authState.token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setRouteShipments(data);
+      } else {
+        // Se der 404 ou 500, mostramos erro
+        console.error("Erro na resposta:", response.status);
+        showAlert('error', 'Não foi possível carregar as reservas. Verifique se o servidor foi reiniciado.');
+      }
+    } catch (err) {
+      console.error("Erro ao carregar reservas:", err);
+      showAlert('error', 'Erro ao carregar lista de reservas.');
+    } finally {
+      setIsLoadingRouteShipments(false);
+    }
+  };
+
   const handleUpdatePoints = async (userId, currentPoints) => {
     const newPoints = prompt("Introduza o novo saldo de pontos:", currentPoints);
     if (newPoints !== null && !isNaN(newPoints)) {
@@ -692,6 +751,31 @@ const AdminContent = () => {
       }
     } catch (err) {
       showAlert('error', 'Erro de conexão');
+    }
+  };
+
+  const handleFixCapacities = async () => {
+    if (!window.confirm('Tem a certeza que deseja corrigir as capacidades das rotas? Isto irá redefinir a disponibilidade para o máximo se estiver incorreta.')) return;
+    
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/admin/system/fix-capacities', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${authState.token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        showAlert('success', `Correção concluída! ${data.fixedCount} rotas corrigidas.`);
+        fetchRoutes(routesPage); // Atualiza a tabela visualmente após a correção
+      } else {
+        const data = await response.json();
+        showAlert('error', data.error || 'Erro ao corrigir rotas');
+      }
+    } catch (err) {
+      showAlert('error', 'Erro de conexão');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -778,6 +862,12 @@ const AdminContent = () => {
             className={`flex items-center space-x-3 w-full p-3 rounded transition ${activeTab === 'messages' ? 'bg-blue-800' : 'hover:bg-blue-700'}`}
           >
             <FaEnvelope /> <span>Mensagens</span>
+          </button>
+          <button 
+            onClick={() => setActiveTab('settings')}
+            className={`flex items-center space-x-3 w-full p-3 rounded transition ${activeTab === 'settings' ? 'bg-blue-800' : 'hover:bg-blue-700'}`}
+          >
+            <FaCog /> <span>Configurações</span>
           </button>
         </nav>
       </div>
@@ -1038,7 +1128,7 @@ const AdminContent = () => {
              
              {isShipmentFormOpen && (
                <div className="p-6 bg-blue-50 border-b">
-                 <form onSubmit={handleCreateShipment} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                 <form onSubmit={handleCreateShipment} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                     <div>
                       <label className="block text-xs font-bold text-gray-700 uppercase mb-1">ID Cliente</label>
                       <input 
@@ -1047,6 +1137,60 @@ const AdminContent = () => {
                         value={newShipment.userId}
                         onChange={e => setNewShipment({...newShipment, userId: e.target.value})}
                         placeholder="UID do utilizador"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Data Viagem</label>
+                      <input 
+                        type="date" 
+                        className="block w-full rounded border-gray-300 shadow-sm p-2 border"
+                        value={newShipment.date}
+                        onChange={e => setNewShipment({...newShipment, date: e.target.value})}
+                        required
+                      />
+                      {newShipment.date && newShipment.from && newShipment.to && (() => {
+                        const route = routes.find(r => 
+                          r.from === newShipment.from && 
+                          r.to === newShipment.to && 
+                          r.date === newShipment.date
+                        );
+                        
+                        if (!route) return (
+                          <p className="text-xs text-gray-500 mt-1 italic">
+                            ℹ️ Rota não visível na lista atual (verifique a data ao criar).
+                          </p>
+                        );
+                        
+                        const capacity = parseFloat(route.capacity) || 50;
+                        const available = parseFloat(route.available);
+                        const percent = Math.min(100, Math.max(0, (available / capacity) * 100));
+                        
+                        return (
+                          <div className="mt-2">
+                            <div className="flex justify-between text-xs mb-1">
+                              <span className="font-semibold text-gray-600">Disponível: {available}kg</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className={`h-2 rounded-full transition-all duration-500 ${
+                                  available < 10 ? 'bg-red-500' : available < 25 ? 'bg-yellow-500' : 'bg-green-500'
+                                }`}
+                                style={{ width: `${percent}%` }}
+                                title={`${available}kg de ${capacity}kg`}
+                              ></div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Peso (Kg)</label>
+                      <input 
+                        type="number" step="0.1"
+                        className="block w-full rounded border-gray-300 shadow-sm p-2 border"
+                        value={newShipment.weight}
+                        onChange={e => setNewShipment({...newShipment, weight: e.target.value})}
                         required
                       />
                     </div>
@@ -1123,6 +1267,29 @@ const AdminContent = () => {
                                     placeholder="Ex: Aeroporto de Lisboa"
                                 />
                             </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Peso (Kg)</label>
+                                    <input
+                                        type="number"
+                                        step="0.1"
+                                        className="w-full border rounded p-2"
+                                        value={editingShipment.weight || ''}
+                                        onChange={e => setEditingShipment({...editingShipment, weight: e.target.value})}
+                                        placeholder="Ex: 10.5"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Descrição / Itens</label>
+                                    <input
+                                        type="text"
+                                        className="w-full border rounded p-2"
+                                        value={Array.isArray(editingShipment.items) ? editingShipment.items.join(', ') : (editingShipment.items || '')}
+                                        onChange={e => setEditingShipment({...editingShipment, items: e.target.value})}
+                                        placeholder="Ex: Roupas, Sapatos"
+                                    />
+                                </div>
+                            </div>
                              <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-bold text-gray-700 mb-1">Origem</label>
@@ -1173,6 +1340,8 @@ const AdminContent = () => {
                     <tr>
                     <th className="p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                     <th className="p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                    <th className="p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Peso</th>
+                    <th className="p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Detalhes</th>
                     <th className="p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                     <th className="p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rota</th>
                     <th className="p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
@@ -1188,6 +1357,10 @@ const AdminContent = () => {
                         <td className="p-4 whitespace-nowrap text-sm">
                           <div className="font-bold text-gray-900">{shipment.userEmail || users.find(u => u.id === shipment.userId)?.email || 'Email N/D'}</div>
                           <div className="text-xs text-gray-500" title={shipment.userId}>ID: {shipment.userId.substring(0, 8)}...</div>
+                        </td>
+                        <td className="p-4 whitespace-nowrap text-sm font-bold">{shipment.weight ? `${shipment.weight} kg` : '-'}</td>
+                        <td className="p-4 text-sm max-w-xs truncate" title={Array.isArray(shipment.items) ? shipment.items.join(', ') : shipment.items}>
+                            {Array.isArray(shipment.items) ? shipment.items.join(', ') : (shipment.items || '-')}
                         </td>
                         <td className="p-4 whitespace-nowrap">
                         <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -1466,6 +1639,110 @@ const AdminContent = () => {
                 </div>
              )}
 
+             {/* Modal de Visualização de Reservas da Rota */}
+             {isRouteShipmentsModalOpen && viewingRoute && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+                        <div className="p-6 border-b flex justify-between items-center">
+                            <h3 className="text-xl font-bold text-gray-800">
+                                Reservas: {viewingRoute.from} → {viewingRoute.to} 
+                                <span className="ml-2 text-sm font-normal text-gray-500">({new Date(viewingRoute.date).toLocaleDateString('pt-PT')})</span>
+                            </h3>
+                            <button onClick={() => setIsRouteShipmentsModalOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                        </div>
+                        <div className="p-6">
+                            {/* Alerta de Discrepância (Diagnóstico Automático) */}
+                            {(() => {
+                                const totalWeightInList = routeShipments.reduce((sum, s) => sum + (parseFloat(s.weight) || 0), 0);
+                                const reservedInRoute = parseFloat(viewingRoute.capacity || 50) - parseFloat(viewingRoute.available);
+                                // Se a diferença for maior que 0.1kg, mostra aviso
+                                if (Math.abs(totalWeightInList - reservedInRoute) > 0.1) {
+                                    return (
+                                        <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-r">
+                                            <div className="flex items-start">
+                                                <div className="flex-shrink-0 mt-0.5"><FaExclamationCircle className="text-red-500 text-lg" /></div>
+                                                <div className="ml-3">
+                                                    <h3 className="text-sm font-bold text-red-800">Erro de Sincronização Detetado</h3>
+                                                    <p className="text-sm text-red-700 mt-1">
+                                                        A rota diz que tem <strong>{reservedInRoute.toFixed(1)} kg</strong> reservados, mas a lista abaixo soma apenas <strong>{totalWeightInList.toFixed(1)} kg</strong>.
+                                                    </p>
+                                                    <p className="text-xs text-red-600 mt-2 font-semibold">👉 Vá a "Configurações" e clique em "Executar Correção" para limpar este erro.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                }
+                            })()}
+
+                            {/* Resumo de Capacidade */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                <div className="bg-blue-50 p-4 rounded border border-blue-100">
+                                    <p className="text-xs font-bold text-gray-500 uppercase">Capacidade Total</p>
+                                    <p className="text-2xl font-bold text-blue-700">{viewingRoute.capacity || 50} kg</p>
+                                </div>
+                                <div className="bg-green-50 p-4 rounded border border-green-100">
+                                    <p className="text-xs font-bold text-gray-500 uppercase">Disponível</p>
+                                    <p className="text-2xl font-bold text-green-700">{viewingRoute.available} kg</p>
+                                </div>
+                                <div className="bg-yellow-50 p-4 rounded border border-yellow-100">
+                                    <p className="text-xs font-bold text-gray-500 uppercase">Reservado</p>
+                                    <p className="text-2xl font-bold text-yellow-700">
+                                        {(parseFloat(viewingRoute.capacity || 50) - parseFloat(viewingRoute.available)).toFixed(1)} kg
+                                    </p>
+                                </div>
+                            </div>
+
+                            <h4 className="font-bold text-gray-700 mb-4">Lista de Envios</h4>
+                            {isLoadingRouteShipments ? (
+                                <div className="flex justify-center p-8"><FaSpinner className="animate-spin text-2xl text-flyfast-blue" /></div>
+                            ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="p-3 text-left">ID</th>
+                                            <th className="p-3 text-left">Cliente</th>
+                                            <th className="p-3 text-left">Peso</th>
+                                            <th className="p-3 text-left">Conteúdo</th>
+                                            <th className="p-3 text-left">Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {routeShipments.length === 0 ? (
+                                            <tr><td colSpan="5" className="p-4 text-center text-gray-500">Nenhuma reserva encontrada para esta rota.</td></tr>
+                                        ) : (
+                                            routeShipments.map(s => (
+                                                <tr key={s.id} className={`hover:bg-gray-50 ${s.status === 'Cancelado' ? 'opacity-50 bg-gray-100' : ''}`}>
+                                                    <td className="p-3 font-mono text-xs">{s.id.substring(0, 8)}...</td>
+                                                    <td className="p-3">
+                                                        <div className="font-bold">{s.userEmail || 'N/D'}</div>
+                                                        <div className="text-xs text-gray-500">{s.userId}</div>
+                                                    </td>
+                                                    <td className="p-3 font-bold">{s.weight} kg</td>
+                                                    <td className="p-3 truncate max-w-xs">{Array.isArray(s.items) ? s.items.join(', ') : s.items}</td>
+                                                    <td className="p-3">
+                                                        <span className={`px-2 py-1 rounded-full text-xs ${
+                                                            s.status === 'Cancelado' ? 'bg-red-100 text-red-800' : 
+                                                            s.status === 'Entregue' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                                                        }`}>
+                                                            {s.status}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                            )}
+                        </div>
+                        <div className="p-6 border-t bg-gray-50 flex justify-end">
+                            <button onClick={() => setIsRouteShipmentsModalOpen(false)} className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 font-bold">Fechar</button>
+                        </div>
+                    </div>
+                </div>
+             )}
+
              <div className="overflow-x-auto">
                 <table className="w-full">
                 <thead className="bg-gray-50 border-b">
@@ -1491,6 +1768,7 @@ const AdminContent = () => {
                         <td className="p-4 whitespace-nowrap text-sm">{route.price}</td>
                         <td className="p-4 whitespace-nowrap text-sm">{route.capacity || route.available || '-'}</td>
                         <td className="p-4 whitespace-nowrap flex space-x-2">
+                          <button onClick={() => handleViewRouteShipments(route)} className="text-green-600 hover:text-green-900" title="Ver Reservas"><FaList /></button>
                           <button onClick={() => handleEditRoute(route)} className="text-blue-600 hover:text-blue-900"><FaEdit /></button>
                           <button onClick={() => handleDeleteRoute(route.id)} className="text-red-600 hover:text-red-900"><FaTrash /></button>
                         </td>
@@ -1709,6 +1987,42 @@ const AdminContent = () => {
                     )}
                   </tbody>
                 </table>
+             </div>
+          </div>
+        )}
+
+        {/* Settings View */}
+        {activeTab === 'settings' && (
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+             <div className="p-4 border-b bg-gray-50">
+                <h3 className="font-bold text-gray-700">Configurações do Sistema</h3>
+             </div>
+             <div className="p-6">
+                <div className="max-w-4xl">
+                  <h4 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <FaSync className="text-blue-500" /> Manutenção do Sistema
+                  </h4>
+                  
+                  <div className="bg-white border rounded-lg p-6 shadow-sm">
+                    <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+                      <div>
+                        <h5 className="font-bold text-gray-800 text-lg mb-2">Corrigir Capacidades das Rotas</h5>
+                        <p className="text-gray-600 mb-4 max-w-2xl">
+                          Este script verifica todas as rotas agendadas e corrige inconsistências onde a disponibilidade (kg) 
+                          é superior à capacidade máxima permitida. Útil se houver erros de sincronização após cancelamentos manuais.
+                        </p>
+                      </div>
+                      <button 
+                        onClick={handleFixCapacities}
+                        disabled={isLoading}
+                        className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-bold flex items-center gap-2 shadow transition disabled:opacity-50 whitespace-nowrap"
+                      >
+                        {isLoading ? <FaSpinner className="animate-spin" /> : <FaSync />} 
+                        Executar Correção
+                      </button>
+                    </div>
+                  </div>
+                </div>
              </div>
           </div>
         )}

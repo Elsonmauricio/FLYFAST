@@ -1,4 +1,4 @@
-const { db } = require('../config/firebase');
+const { db, FieldValue } = require('../config/firebase');
 const emailService = require('../services/emailService');
 
 // Rastrear um envio pelo código (ID)
@@ -174,9 +174,8 @@ const subscribeToUpdates = async (req, res) => {
   try {
     const shipmentRef = db.collection('shipments').doc(trackingCode);
     // Adiciona o email ao array 'subscribers', criando o array se não existir (arrayUnion evita duplicados)
-    const admin = require('firebase-admin'); // Necessário para FieldValue
     await shipmentRef.update({
-      subscribers: admin.firestore.FieldValue.arrayUnion(email)
+      subscribers: FieldValue.arrayUnion(email)
     });
 
     res.json({ message: 'Subscrição realizada com sucesso.' });

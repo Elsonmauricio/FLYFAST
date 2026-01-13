@@ -7,4 +7,8 @@ const { trackingLimiter } = require('../middleware/rateLimit');
 // Rota dedicada para o rastreio, correspondendo à chamada do frontend
 router.get('/:trackingCode', trackingLimiter, shipmentController.trackShipment);
 
+// POST /api/tracking/:trackingCode/subscribe
+// Rota para subscrever notificações por email
+router.post('/:trackingCode/subscribe', trackingLimiter, shipmentController.subscribeToUpdates);
+
 module.exports = router;

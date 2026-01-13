@@ -88,7 +88,8 @@ router.get('/notifications', isAuthenticated, hasRole(['admin']), adminControlle
 router.put('/notifications/:id', isAuthenticated, hasRole(['admin']), adminController.markAdminNotificationAsRead);
 
 // --- GESTÃO DE PREÇOS (Inline para acesso direto ao DB) ---
-router.get('/pricing', isAuthenticated, hasRole(['admin']), async (req, res) => {
+// Rota PÚBLICA para que o site (Routes.jsx) possa ler os preços
+router.get('/pricing', async (req, res) => {
   try {
     const doc = await db.collection('settings').doc('pricing').get();
     // Valores padrão se não existir configuração
@@ -165,6 +166,84 @@ router.delete('/contact-requests/:id', isAuthenticated, hasRole(['admin']), asyn
     res.json({ message: 'Mensagem apagada com sucesso' });
   } catch (error) {
     res.status(500).json({ error: 'Erro ao apagar mensagem' });
+  }
+});
+
+// --- MANUTENÇÃO: Corrigir Capacidades (Script de Correção) ---
+router.post('/system/fix-capacities', isAuthenticated, hasRole(['admin']), async (req, res) => {
+  try {
+    const snapshot = await db.collection('schedules').get();
+    let fixedCount = 0;
+    const updates = [];
+
+    console.log(`🔄 Iniciando sincronização de ${snapshot.size} rotas...`);
+
+    // Usar loop for...of para permitir await sequencial (mais seguro para muitas rotas)
+    for (const doc of snapshot.docs) {
+      const data = doc.data();
+      const scheduleId = doc.id;
+      
+      // 1. Determinar Capacidade Máxima (Lógica igual ao shipments.js)
+      let maxCapacity = 50;
+      if (data.capacity) {
+         const parsed = parseFloat(String(data.capacity).replace(/[^0-9.]/g, ''));
+         if (!isNaN(parsed) && parsed > 0) maxCapacity = parsed;
+      }
+
+      // 2. Calcular peso real reservado somando os envios ativos na base de dados
+      const shipmentsSnapshot = await db.collection('shipments')
+        .where('scheduleId', '==', scheduleId)
+        .get();
+      
+      let totalReserved = 0;
+      shipmentsSnapshot.forEach(s => {
+        const sData = s.data();
+        // Ignorar envios cancelados
+        if (sData.status !== 'Cancelado') {
+           totalReserved += (parseFloat(sData.weight) || 0);
+        }
+      });
+
+      // 3. Calcular disponibilidade correta e comparar
+      const correctAvailable = Math.max(0, maxCapacity - totalReserved);
+      const currentAvailable = parseFloat(data.available);
+      
+      // 4. Atualizar se houver discrepância (com margem de erro para float)
+      if (isNaN(currentAvailable) || Math.abs(currentAvailable - correctAvailable) > 0.01) {
+        console.log(`🔧 Rota ${scheduleId}: Ajustando disponível de ${currentAvailable} para ${correctAvailable} (Reservado Real: ${totalReserved})`);
+        updates.push(doc.ref.update({ available: correctAvailable }));
+        fixedCount++;
+      }
+    }
+
+    if (updates.length > 0) {
+      await Promise.all(updates);
+    }
+
+    res.json({ 
+      message: 'Sincronização concluída. Capacidades recalculadas com base nos envios reais.', 
+      fixedCount, 
+      totalChecked: snapshot.size 
+    });
+  } catch (error) {
+    console.error('Erro ao corrigir capacidades:', error);
+    res.status(500).json({ error: 'Erro ao executar script de correção.' });
+  }
+});
+
+// --- ROTA: Buscar Envios de um Agendamento Específico ---
+router.get('/schedules/:id/shipments', isAuthenticated, hasRole(['admin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const snapshot = await db.collection('shipments')
+      .where('scheduleId', '==', id)
+      .get();
+    
+    const shipments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    res.json(shipments);
+  } catch (error) {
+    console.error('Erro ao buscar envios da rota:', error);
+    res.status(500).json({ error: 'Erro ao buscar envios da rota' });
   }
 });
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTracking } from '../hooks/useTracking';
 import { useParams } from 'react-router-dom';
 import { FaSearch, FaSpinner, FaExclamationCircle, FaBell, FaEnvelope, FaPlane } from 'react-icons/fa';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -13,6 +13,15 @@ L.Icon.Default.mergeOptions({
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
+
+// Componente auxiliar para atualizar o centro do mapa quando a localização muda
+const MapUpdater = ({ center }) => {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(center, map.getZoom());
+  }, [center, map]);
+  return null;
+};
 
 const Tracking = () => {
   const params = useParams();
@@ -44,7 +53,7 @@ const Tracking = () => {
     setIsSubscribing(true);
     
     try {
-      const response = await fetch(`/api/shipments/track/${trackingInfo.code}/subscribe`, {
+      const response = await fetch(`/api/tracking/${trackingInfo.code}/subscribe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: emailForUpdates })
@@ -54,7 +63,11 @@ const Tracking = () => {
         alert(`Notificações ativadas para ${emailForUpdates}! Receberá um email sempre que o estado mudar.`);
         setEmailForUpdates('');
       } else {
-        alert('Erro ao subscrever notificações. Tente novamente.');
+        if (response.status === 404) {
+          alert('Serviço indisponível momentaneamente (Rota não encontrada). Por favor, contacte o suporte.');
+        } else {
+          alert('Erro ao subscrever notificações. Tente novamente.');
+        }
       }
     } catch (error) {
       alert('Erro de conexão.');
@@ -75,17 +88,29 @@ const Tracking = () => {
   };
 
   // Coordenadas das principais cidades (Adicione mais conforme necessário)
+  // As chaves devem estar em minúsculas para facilitar a comparação
   const LOCATION_COORDINATES = {
-    'Luanda': [ -8.839988, 13.289437 ],
-    'Lisboa': [ 38.722252, -9.139337 ],
-    'Porto': [ 41.157944, -8.629105 ],
-    'Em Trânsito': [ 15.0, 0.0 ], // Ponto no oceano (exemplo visual)
+    'luanda': [ -8.839988, 13.289437 ],
+    'viana': [ -8.9158, 13.3469 ],
+    'lisboa': [ 38.722252, -9.139337 ],
+    'odivelas': [ 38.7944, -9.1764 ],
+    'porto': [ 41.157944, -8.629105 ],
+    'benguela': [ -12.5763, 13.4055 ],
+    'lobito': [ -12.3481, 13.5456 ],
+    'huambo': [ -12.7761, 15.7416 ],
+    'lubango': [ -14.9172, 13.4925 ],
+    'cabinda': [ -5.5500, 12.2000 ],
+    'faro': [ 37.0179, -7.9308 ],
+    'coimbra': [ 40.2033, -8.4103 ],
+    'setúbal': [ 38.5244, -8.8882 ],
+    'em trânsito': [ 15.0, 0.0 ], // Ponto no oceano (exemplo visual)
   };
 
   const getCoordinates = (location) => {
-    if (!location) return LOCATION_COORDINATES['Luanda'];
-    const key = Object.keys(LOCATION_COORDINATES).find(k => location.includes(k));
-    return LOCATION_COORDINATES[key] || LOCATION_COORDINATES['Luanda'];
+    if (!location) return LOCATION_COORDINATES['luanda'];
+    const lowerLoc = location.toLowerCase();
+    const key = Object.keys(LOCATION_COORDINATES).find(k => lowerLoc.includes(k));
+    return LOCATION_COORDINATES[key] || LOCATION_COORDINATES['luanda'];
   };
 
   return (
@@ -142,6 +167,7 @@ const Tracking = () => {
                  style={{ height: '100%', width: '100%' }}
                  scrollWheelZoom={false}
                >
+                 <MapUpdater center={getCoordinates(trackingInfo.currentLocation)} />
                  <TileLayer
                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

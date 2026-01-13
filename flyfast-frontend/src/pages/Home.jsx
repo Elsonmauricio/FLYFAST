@@ -13,7 +13,7 @@ const Home = () => {
   useEffect(() => {
     const fetchRoutes = async () => {
       try {
-        const response = await fetch('/api/schedules?limit=3');
+        const response = await fetch(`/api/schedules?limit=3&_t=${new Date().getTime()}`);
         if (response.ok) {
           const data = await response.json();
           const routesList = data.schedules || data;
