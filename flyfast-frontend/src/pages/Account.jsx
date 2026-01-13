@@ -18,7 +18,7 @@ const Account = () => {
 
   const { shipments, isLoading: isLoadingShipments, error: shipmentsError } = useShipments();
   const { orders, isLoading: isLoadingOrders, error: ordersError } = useOrders();
-  const { notifications, isLoading: isLoadingNotifications, error: notificationsError, fetchNotifications } = useNotifications();
+  const { notifications, isLoading: isLoadingNotifications, error: notificationsError, fetchNotifications, triggerNotification } = useNotifications();
 
   // Estados para Personal Shopper
   const [personalShopperRequests, setPersonalShopperRequests] = useState([]);
@@ -251,6 +251,16 @@ const Account = () => {
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Erro ao criar reserva');
+      }
+
+      // Disparar notificação e atualizar lista
+      if (triggerNotification) {
+        await triggerNotification({
+          title: 'Reserva de Envio Criada',
+          message: `A sua reserva para a rota ${selectedRoute.from} -> ${selectedRoute.to} foi registada com sucesso.`,
+          type: 'success'
+        });
+        fetchNotifications(); // Atualiza a lista de notificações imediatamente
       }
 
       alert('Reserva efetuada com sucesso! Verifique o seu email.');

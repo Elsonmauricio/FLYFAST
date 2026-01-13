@@ -72,12 +72,33 @@ export const useRegister = () => {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const performRegister = useCallback(async (email, password, name) => {
+  const performRegister = useCallback(async (email, password, name, phone) => {
     setIsLoading(true);
     setError(null);
 
     if (password.length < 6) {
       setError('A palavra-passe deve ter no mínimo 6 caracteres.');
+      setIsLoading(false);
+      return;
+    }
+
+    // Validação de Email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Por favor, insira um endereço de email válido.');
+      setIsLoading(false);
+      return;
+    }
+
+    // Validação de Telefone (Angola ou Portugal)
+    const phoneClean = phone ? phone.replace(/\D/g, '') : '';
+    const validPhone = 
+      /^9[1-9]\d{7}$/.test(phoneClean) ||        // 9xxxxxxxx (9 dígitos)
+      /^2449[1-9]\d{7}$/.test(phoneClean) ||     // 2449xxxxxxxx (Angola com indicativo)
+      /^3519[1-9]\d{7}$/.test(phoneClean);       // 3519xxxxxxxx (Portugal com indicativo)
+
+    if (!validPhone) {
+      setError('Número de telefone inválido. Insira um número válido de Angola ou Portugal.');
       setIsLoading(false);
       return;
     }
@@ -94,7 +115,7 @@ export const useRegister = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ name, email }),
+        body: JSON.stringify({ name, email, phone }),
       });
 
       if (!response.ok) {

@@ -340,7 +340,10 @@ const AdminContent = () => {
       fetchRoutes(); // Carregar rotas para poder validar a capacidade
     }
     if (activeTab === 'personalShopper') fetchPersonalShopperRequests();
-    if (activeTab === 'routes') fetchRoutes(0);
+    if (activeTab === 'routes') {
+      fetchRoutes(0);
+      fetchShipments(); // Carregar envios para calcular capacidade real
+    }
     if (activeTab === 'pricing') fetchPricing();
     if (activeTab === 'messages') fetchContactMessages();
   }, [activeTab, authState.user, authState.token]);
@@ -524,8 +527,9 @@ const AdminContent = () => {
     if (!editingShipment) return;
 
     try {
-      const response = await fetch(`/api/shipments/${editingShipment.id}`, {
-        method: 'PUT',
+      // Usar o novo endpoint que suporta notificações
+      const response = await fetch(`/api/admin/shipments/${editingShipment.id}/update-status`, {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${authState.token}`,
           'Content-Type': 'application/json'
@@ -777,6 +781,21 @@ const AdminContent = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleFixUsers = async () => {
+    if (!window.confirm('Deseja verificar e criar perfis para utilizadores que existam no Auth mas não na Base de Dados?')) return;
+    
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/admin/system/fix-users', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${authState.token}` }
+      });
+      const data = await response.json();
+      if (response.ok) showAlert('success', data.message);
+      else showAlert('error', data.error || 'Erro ao corrigir utilizadores');
+    } catch (err) { showAlert('error', 'Erro de conexão'); } finally { setIsLoading(false); }
   };
 
   // Processar dados para o gráfico (Envios por Mês)
@@ -1537,15 +1556,33 @@ const AdminContent = () => {
 
         {/* Routes View */}
         {activeTab === 'routes' && (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-             <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+          (() => {
+            const shipmentsByRoute = shipments.reduce((acc, shipment) => {
+              if (!shipment.scheduleId || shipment.status === 'Cancelado') return acc;
+              const weight = parseFloat(shipment.weight) || 0;
+              acc[shipment.scheduleId] = (acc[shipment.scheduleId] || 0) + weight;
+              return acc;
+            }, {});
+
+            return (
+              <div className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="p-4 border-b flex flex-col md:flex-row justify-between items-center bg-gray-50 gap-3">
                 <h3 className="font-bold text-gray-700">Gerir Rotas de Envio</h3>
-                <button 
-                  onClick={() => setIsRouteFormOpen(!isRouteFormOpen)}
-                  className="bg-flyfast-blue text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-blue-700 text-sm"
-                >
-                  <FaPlus /> Nova Rota
-                </button>
+                <div className="flex items-center gap-3">
+                  <button 
+                    onClick={() => fetchRoutes(routesPage)} 
+                    className="text-gray-500 hover:text-flyfast-blue transition p-2 rounded-full bg-white border shadow-sm" 
+                    title="Atualizar lista de rotas"
+                  >
+                    <FaSync />
+                  </button>
+                  <button 
+                    onClick={() => setIsRouteFormOpen(!isRouteFormOpen)}
+                    className="bg-flyfast-blue text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-blue-700 text-sm shadow-sm"
+                  >
+                    <FaPlus /> Nova Rota
+                  </button>
+                </div>
              </div>
 
              {isRouteFormOpen && (
@@ -1758,22 +1795,40 @@ const AdminContent = () => {
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                    {routes.map(route => (
-                    <tr key={route.id} className="hover:bg-gray-50">
+                    {routes.map(route => {
+                      const capacity = parseFloat(String(route.capacity).replace(/[^0-9.]/g, '')) || 50;
+                      const availableFromDB = parseFloat(String(route.available).replace(/[^0-9.]/g, ''));
+                      
+                      const reservedWeightCalculated = shipmentsByRoute[route.id] || 0;
+                      const availableCalculated = capacity - reservedWeightCalculated;
+
+                      const isSynced = Math.abs(availableFromDB - availableCalculated) < 0.1;
+
+                      return (
+                    <tr key={route.id} className={`hover:bg-gray-50 ${!isSynced ? 'bg-red-50 hover:bg-red-100' : ''}`}>
                         <td className="p-4 whitespace-nowrap text-sm font-medium">{route.from}</td>
                         <td className="p-4 whitespace-nowrap text-sm font-medium">{route.to}</td>
                         <td className="p-4 whitespace-nowrap text-sm">{route.date}</td>
                         <td className="p-4 whitespace-nowrap text-sm">{route.departureTime || '-'}</td>
                         <td className="p-4 whitespace-nowrap text-sm">{route.duration || '-'}</td>
                         <td className="p-4 whitespace-nowrap text-sm">{route.price}</td>
-                        <td className="p-4 whitespace-nowrap text-sm">{route.capacity || route.available || '-'}</td>
+                        <td className="p-4 whitespace-nowrap text-sm">
+                          <div className="flex items-center gap-2">
+                            <span title={`Disponível: ${availableCalculated.toFixed(1)}kg`}>{availableCalculated.toFixed(1)}kg / {capacity.toFixed(1)}kg</span>
+                            {!isSynced && (
+                                <div className="text-red-500" title={`Discrepância! DB: ${availableFromDB.toFixed(1)}kg, Calculado: ${availableCalculated.toFixed(1)}kg`}>
+                                    <FaExclamationCircle />
+                                </div>
+                            )}
+                          </div>
+                        </td>
                         <td className="p-4 whitespace-nowrap flex space-x-2">
                           <button onClick={() => handleViewRouteShipments(route)} className="text-green-600 hover:text-green-900" title="Ver Reservas"><FaList /></button>
                           <button onClick={() => handleEditRoute(route)} className="text-blue-600 hover:text-blue-900"><FaEdit /></button>
                           <button onClick={() => handleDeleteRoute(route.id)} className="text-red-600 hover:text-red-900"><FaTrash /></button>
                         </td>
                     </tr>
-                    ))}
+                    )})}
                     {routes.length === 0 && (
                         <tr><td colSpan="8" className="p-8 text-center text-gray-500">Nenhuma rota disponível.</td></tr>
                     )}
@@ -1781,6 +1836,8 @@ const AdminContent = () => {
                 </table>
             </div>
           </div>
+            )
+          })()
         )}
 
         {/* Pricing View */}
@@ -2019,6 +2076,25 @@ const AdminContent = () => {
                       >
                         {isLoading ? <FaSpinner className="animate-spin" /> : <FaSync />} 
                         Executar Correção
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-white border rounded-lg p-6 shadow-sm mt-4">
+                    <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+                      <div>
+                        <h5 className="font-bold text-gray-800 text-lg mb-2">Sincronizar Utilizadores (Auth vs DB)</h5>
+                        <p className="text-gray-600 mb-4 max-w-2xl">
+                          Deteta utilizadores que se registaram mas ficaram sem perfil na base de dados (erro "Membro desde 2024" ou dados em falta). Cria um perfil base para eles.
+                        </p>
+                      </div>
+                      <button 
+                        onClick={handleFixUsers}
+                        disabled={isLoading}
+                        className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 font-bold flex items-center gap-2 shadow transition disabled:opacity-50 whitespace-nowrap"
+                      >
+                        {isLoading ? <FaSpinner className="animate-spin" /> : <FaUsers />} 
+                        Restaurar Perfis
                       </button>
                     </div>
                   </div>

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
-const { db } = require('../config/firebase');
+const { db, auth } = require('../config/firebase');
 // const { adminAuth } = require('../middleware/auth');
 const { uploadSingle } = require('../middleware/upload');
 const { isAuthenticated, hasRole } = require('../middleware/authMiddleware');
@@ -24,6 +24,47 @@ router.put('/shipments/:id', isAuthenticated, hasRole(['admin']), adminControlle
 router.delete('/shipments/:id', isAuthenticated, hasRole(['admin']), adminController.deleteShipment);
 router.post('/shipments/:id/resend-email', isAuthenticated, hasRole(['admin']), adminController.resendShipmentEmail);
 router.post('/shipments/export', isAuthenticated, hasRole(['admin']), adminController.exportShipments);
+
+// --- ROTA NOVA: Atualizar Envio com Notificação Automática ---
+router.post('/shipments/:id/update-status', isAuthenticated, hasRole(['admin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body; // Recebe todos os campos (status, location, weight, etc.)
+
+    const shipmentRef = db.collection('shipments').doc(id);
+    const doc = await shipmentRef.get();
+
+    if (!doc.exists) {
+      return res.status(404).json({ error: 'Envio não encontrado' });
+    }
+
+    const currentData = doc.data();
+
+    // Atualizar o documento no Firestore
+    await shipmentRef.update(updates);
+
+    // Verificar se o estado mudou e se existe um utilizador associado para notificar
+    if (updates.status && updates.status !== currentData.status && currentData.userId) {
+      const notification = {
+        title: `Atualização de Envio #${id}`,
+        message: `O estado do seu envio mudou para: ${updates.status}.${updates.currentLocation ? ` Localização: ${updates.currentLocation}` : ''}`,
+        type: 'info',
+        read: false,
+        createdAt: new Date().toISOString(),
+        relatedId: id,
+        relatedType: 'shipment'
+      };
+
+      // Adicionar à subcoleção de notificações do utilizador
+      await db.collection('users').doc(currentData.userId).collection('notifications').add(notification);
+    }
+
+    res.json({ message: 'Envio atualizado e notificação enviada (se aplicável).' });
+  } catch (error) {
+    console.error('Erro ao atualizar envio:', error);
+    res.status(500).json({ error: 'Erro interno ao atualizar envio.' });
+  }
+});
 
 // Pedidos
 router.get('/orders', isAuthenticated, hasRole(['admin']), adminController.getOrders);
@@ -166,6 +207,54 @@ router.delete('/contact-requests/:id', isAuthenticated, hasRole(['admin']), asyn
     res.json({ message: 'Mensagem apagada com sucesso' });
   } catch (error) {
     res.status(500).json({ error: 'Erro ao apagar mensagem' });
+  }
+});
+
+// --- MANUTENÇÃO: Corrigir Perfis de Utilizadores em Falta ---
+router.post('/system/fix-users', isAuthenticated, hasRole(['admin']), async (req, res) => {
+  try {
+    console.log('🔄 Iniciando verificação de perfis de utilizadores...');
+    
+    // Listar utilizadores do Firebase Auth (limite 1000 por lote)
+    // Para bases muito grandes, seria necessário paginação, mas para <1000 funciona direto
+    const listUsersResult = await auth.listUsers(1000);
+    let fixedCount = 0;
+    const batch = db.batch();
+    let batchCount = 0;
+
+    for (const userRecord of listUsersResult.users) {
+      const userRef = db.collection('users').doc(userRecord.uid);
+      const doc = await userRef.get();
+
+      // Se o documento não existir no Firestore, cria-o
+      if (!doc.exists) {
+        const userData = {
+          uid: userRecord.uid,
+          name: userRecord.displayName || 'Utilizador Recuperado',
+          email: userRecord.email || '',
+          phone: userRecord.phoneNumber || '', // Tenta pegar do Auth se existir
+          role: 'customer',
+          createdAt: userRecord.metadata.creationTime,
+          memberSince: userRecord.metadata.creationTime, // Corrige a data "Membro desde"
+          loyaltyPoints: 0,
+          isActive: !userRecord.disabled,
+          preferences: {
+            emailUpdates: true,
+            whatsappUpdates: true
+          }
+        };
+        batch.set(userRef, userData);
+        fixedCount++;
+        batchCount++;
+      }
+    }
+
+    if (batchCount > 0) await batch.commit();
+
+    res.json({ message: `Verificação concluída. ${fixedCount} perfis em falta foram restaurados.`, fixedCount });
+  } catch (error) {
+    console.error('Erro ao corrigir utilizadores:', error);
+    res.status(500).json({ error: 'Erro ao executar script de correção de utilizadores.' });
   }
 });
 

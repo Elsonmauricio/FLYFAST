@@ -34,6 +34,47 @@ const isAdmin = async (req, res, next) => {
   }
 };
 
+// POST /create-profile - Criar perfil do utilizador (Chamado pelo frontend após registo)
+router.post('/create-profile', authenticate, async (req, res) => {
+  try {
+    const { uid, email: tokenEmail } = req.user;
+    const { name, email, phone } = req.body;
+
+    // Validação obrigatória do telefone
+    if (!phone) {
+      return res.status(400).json({ error: 'O número de telefone é obrigatório para criar o perfil.' });
+    }
+
+    // Referência ao documento
+    const userRef = db.collection('users').doc(uid);
+    
+    // Dados do novo utilizador
+    const userData = {
+      uid,
+      name: name || '',
+      email: tokenEmail || email, // Prioriza o email do token
+      phone: phone || '',
+      role: 'customer',
+      createdAt: new Date().toISOString(),
+      memberSince: new Date().toISOString(),
+      loyaltyPoints: 0,
+      isActive: true,
+      preferences: {
+        emailUpdates: true,
+        whatsappUpdates: true
+      }
+    };
+
+    // Salvar no Firestore
+    await userRef.set(userData);
+
+    res.status(201).json({ message: 'Perfil criado com sucesso', user: userData });
+  } catch (error) {
+    console.error('Erro ao criar perfil:', error);
+    res.status(500).json({ error: 'Erro ao criar perfil no banco de dados.' });
+  }
+});
+
 // GET /api/users/me - Obter dados do utilizador logado
 router.get('/me', authenticate, async (req, res) => {
   try {

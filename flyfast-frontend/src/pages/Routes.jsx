@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import RouteCard from '../components/RouteCard';
 import BookingModal from '../components/BookingModal';
 import { FaSpinner, FaExclamationCircle } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../hooks/useNotifications';
 import { useNavigate } from 'react-router-dom';
 
 const Routes = () => {
@@ -13,6 +14,7 @@ const Routes = () => {
   const [routes, setRoutes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { triggerNotification } = useNotifications();
   
   // Estado para Tabela de Preços Dinâmica
   const [pricing, setPricing] = useState({
@@ -58,26 +60,27 @@ const Routes = () => {
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [isBookingLoading, setIsBookingLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchRoutes = async () => {
-      try {
-        // Adiciona timestamp (?_t=...) para evitar que o navegador use dados antigos (cache)
-        const response = await fetch(`/api/schedules?_t=${new Date().getTime()}`);
-        if (!response.ok) {
-          throw new Error('Falha ao carregar as rotas.');
-        }
-        const data = await response.json();
-        setRoutes(data);
-      } catch (err) {
-        console.error(err);
-        setError('Não foi possível carregar as rotas em tempo real.');
-      } finally {
-        setIsLoading(false);
+  const fetchRoutes = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      // Adiciona timestamp (?_t=...) para evitar que o navegador use dados antigos (cache)
+      const response = await fetch(`/api/schedules?_t=${new Date().getTime()}`);
+      if (!response.ok) {
+        throw new Error('Falha ao carregar as rotas.');
       }
-    };
-
-    fetchRoutes();
+      const data = await response.json();
+      setRoutes(data);
+    } catch (err) {
+      console.error(err);
+      setError('Não foi possível carregar as rotas em tempo real.');
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchRoutes();
+  }, [fetchRoutes]);
 
   const handleOpenBooking = (route) => {
     if (!authState.isAuthenticated) {
@@ -115,10 +118,19 @@ const Routes = () => {
         throw new Error(errorData.error || 'Erro ao criar reserva');
       }
 
+      // Disparar notificação para a conta do utilizador
+      if (triggerNotification) {
+        await triggerNotification({
+          title: 'Reserva de Envio Criada',
+          message: `A sua reserva para a rota ${selectedRoute.from} -> ${selectedRoute.to} foi registada com sucesso.`,
+          type: 'success'
+        });
+      }
+
       alert('Reserva efetuada com sucesso! Verifique o seu email.');
       setIsBookingModalOpen(false);
       // Recarregar rotas para atualizar a capacidade disponível
-      window.location.reload(); 
+      fetchRoutes();
     } catch (err) {
       alert(err.message);
     } finally {

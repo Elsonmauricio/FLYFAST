@@ -7,6 +7,7 @@ const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const { performRegister, isLoading, error } = useRegister();
   const { authState } = useAuth();
   const navigate = useNavigate();
@@ -20,7 +21,7 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await performRegister(email, password, name);
+    await performRegister(email, password, name, phone);
   };
 
   return (
@@ -65,6 +66,20 @@ const Register = () => {
                 placeholder="Endereço de email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="phone" className="sr-only">WhatsApp</label>
+              <input
+                id="phone"
+                name="phone"
+                type="tel"
+                autoComplete="tel"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-flyfast-yellow focus:border-flyfast-yellow focus:z-10 sm:text-sm"
+                placeholder="Número WhatsApp"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
               />
             </div>
             <div>
