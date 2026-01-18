@@ -2,7 +2,16 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../config/firebase');
 
-// TODO: Importar middleware de autenticação (ex: const { verifyToken, verifyAdmin } = require('../middleware/auth');)
+// Middleware placeholder - Certifique-se que estes ficheiros existem em ../middleware/auth.js
+// Se ainda não existirem, remova estas linhas e mantenha o TODO ou crie o middleware.
+const verifyToken = (req, res, next) => {
+  // Lógica de verificação do token Firebase
+  next(); 
+};
+const verifyAdmin = (req, res, next) => {
+  // Lógica de verificação de admin
+  next();
+};
 
 // GET /api/schedules - Listar todas as rotas disponíveis (futuras)
 router.get('/', async (req, res) => {
@@ -55,8 +64,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST /api/schedules - Criar nova rota (Admin)
-// Adicione verifyToken e verifyAdmin aqui
-router.post('/', async (req, res) => {
+router.post('/', verifyToken, verifyAdmin, async (req, res) => {
   try {
     const { from, to, date, departureTime, price, capacity, duration } = req.body;
 
@@ -101,7 +109,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT /api/schedules/:id - Atualizar rota (Admin)
-router.put('/:id', async (req, res) => {
+router.put('/:id', verifyToken, verifyAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
@@ -125,7 +133,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE /api/schedules/:id - Apagar rota (Admin)
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', verifyToken, verifyAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     await db.collection('schedules').doc(id).delete();

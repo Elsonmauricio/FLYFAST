@@ -25,7 +25,7 @@ const contactRoutes = require('./routes/contact');
 // No server.js
 const pricingRoutes = require('./routes/pricing');
 
-// const shopifyRoutes = require('./routes/shopify');
+const shopifyRoutes = require('./routes/shopify'); // Certifique-se que este arquivo existe
 
 // Inicializar app
 const app = express();
@@ -81,7 +81,7 @@ app.use('/api/schedules', scheduleRoutes);
 app.use('/api/tracking', trackingRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/pricing', pricingRoutes);
-// app.use('/api/shopify', shopifyRoutes);
+app.use('/api/shopify', shopifyRoutes); // Rota registrada aqui
 
 // Rota de saúde
 app.get('/api/health', (req, res) => {

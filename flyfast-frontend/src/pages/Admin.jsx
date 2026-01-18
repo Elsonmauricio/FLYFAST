@@ -25,7 +25,8 @@ const AdminContent = () => {
     to: 'Lisboa',
     status: 'Pendente',
     weight: '',
-    date: ''
+    date: '',
+    items: '' // Adicionado campo para descrição
   });
   const { showAlert } = useAlert();
 
@@ -481,7 +482,7 @@ const AdminContent = () => {
         setIsShipmentFormOpen(false);
         fetchShipments();
         fetchRoutes(); // Atualiza as rotas para refletir a nova capacidade imediatamente
-        setNewShipment({ userId: '', from: 'Luanda', to: 'Lisboa', status: 'Pendente', weight: '', date: '' });
+        setNewShipment({ userId: '', from: 'Luanda', to: 'Lisboa', status: 'Pendente', weight: '', date: '', items: '' });
         showAlert('success', 'Envio criado com sucesso!');
       } else {
         const data = await response.json();
@@ -1147,7 +1148,7 @@ const AdminContent = () => {
              
              {isShipmentFormOpen && (
                <div className="p-6 bg-blue-50 border-b">
-                 <form onSubmit={handleCreateShipment} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                 <form onSubmit={handleCreateShipment} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
                     <div>
                       <label className="block text-xs font-bold text-gray-700 uppercase mb-1">ID Cliente</label>
                       <input 
@@ -1211,6 +1212,17 @@ const AdminContent = () => {
                         value={newShipment.weight}
                         onChange={e => setNewShipment({...newShipment, weight: e.target.value})}
                         required
+                      />
+                    </div>
+                    {/* NOVO CAMPO: Descrição / Itens */}
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Descrição / Itens</label>
+                      <input 
+                        type="text"
+                        className="block w-full rounded border-gray-300 shadow-sm p-2 border"
+                        value={newShipment.items}
+                        onChange={e => setNewShipment({...newShipment, items: e.target.value})}
+                        placeholder="Ex: Roupas, Eletrónica"
                       />
                     </div>
                     <div>
@@ -1389,7 +1401,7 @@ const AdminContent = () => {
                         </span>
                         </td>
                         <td className="p-4 whitespace-nowrap text-sm">{shipment.from} → {shipment.to}</td>
-                        <td className="p-4 whitespace-nowrap text-sm">{shipment.createdAt ? new Date(shipment.createdAt).toLocaleDateString('pt-PT') : '-'}</td>
+                        <td className="p-4 whitespace-nowrap text-sm">{shipment.createdAt ? new Date(shipment.createdAt).toLocaleString('pt-PT') : '-'}</td>
                         <td className="p-4 whitespace-nowrap flex space-x-3">
                         <button onClick={() => handleEditShipment(shipment)} className="text-blue-600 hover:text-blue-900"><FaEdit /></button>
                         <button onClick={() => handleResendEmail(shipment.id)} className="text-yellow-600 hover:text-yellow-900" title="Reenviar Email"><FaEnvelope /></button>
@@ -1683,7 +1695,7 @@ const AdminContent = () => {
                         <div className="p-6 border-b flex justify-between items-center">
                             <h3 className="text-xl font-bold text-gray-800">
                                 Reservas: {viewingRoute.from} → {viewingRoute.to} 
-                                <span className="ml-2 text-sm font-normal text-gray-500">({new Date(viewingRoute.date).toLocaleDateString('pt-PT')})</span>
+                                <span className="ml-2 text-sm font-normal text-gray-500">({viewingRoute.date})</span>
                             </h3>
                             <button onClick={() => setIsRouteShipmentsModalOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
                         </div>

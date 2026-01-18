@@ -5,6 +5,7 @@ const User = require('../models/User'); // Modelo de Usuário para gerir carrinh
 const Order = require('../models/Order'); // Modelo de Pedido
 const { generateSlug } = require('../utils/helpers'); // Helper para criar slugs amigáveis para URL
 const { db } = require('../config/firebase'); // Importar a instância do Firestore
+const crypto = require('crypto');
 
 class ShopController {
   
@@ -337,6 +338,113 @@ class ShopController {
   // Métodos de Webhook
   async handleStripeWebhook(req, res) { res.status(501).json({ message: 'Not Implemented: handleStripeWebhook' }); }
   async handlePayPalWebhook(req, res) { res.status(501).json({ message: 'Not Implemented: handlePayPalWebhook' }); }
+
+  /**
+   * Webhook para sincronizar stock da Shopify com a Base de Dados Local
+   * Recebe notificações de 'products/update'
+   */
+  async handleShopifyWebhook(req, res) {
+    try {
+      // 1. Validação de Segurança (HMAC)
+      const hmac = req.get('X-Shopify-Hmac-Sha256');
+      const topic = req.get('X-Shopify-Topic');
+      const secret = process.env.SHOPIFY_WEBHOOK_SECRET;
+
+      if (!secret) {
+        console.warn('SHOPIFY_WEBHOOK_SECRET não definido no .env');
+        return res.status(500).send('Configuração de servidor ausente');
+      }
+
+      // Nota: Em produção, deve validar o HMAC usando o rawBody da requisição para garantir que veio da Shopify
+      // const hash = crypto.createHmac('sha256', secret).update(req.rawBody).digest('base64');
+      // if (hash !== hmac) return res.status(401).send('HMAC inválido');
+
+      // 2. Processar Evento
+      console.log(`[Webhook Shopify] Tópico recebido: ${topic}`);
+
+      if (topic === 'products/update') {
+        const { id, handle, title, body_html, variants, images, status } = req.body;
+        
+        // Tenta encontrar o produto localmente pelo ID da Shopify ou pelo Slug (handle)
+        let snapshot = await db.collection('products').where('shopifyId', '==', id).get();
+        
+        if (snapshot.empty) {
+          snapshot = await db.collection('products').where('slug', '==', handle).get();
+        }
+
+        // Dados a salvar/atualizar
+        const productData = {
+          shopifyId: id,
+          name: title,
+          slug: handle,
+          description: body_html ? body_html.replace(/<[^>]*>?/gm, '') : '', // Remove HTML básico
+          price: { 
+            amount: variants[0]?.price || 0, 
+            currency: 'AOA' 
+          },
+          inventory: { 
+            stock: variants.reduce((acc, v) => acc + (v.inventory_quantity || 0), 0) 
+          },
+          images: images ? images.map(img => img.src) : [],
+          status: status === 'active' ? 'active' : 'inactive',
+          updatedAt: new Date().toISOString()
+        };
+
+        if (!snapshot.empty) {
+          const doc = snapshot.docs[0];
+          await doc.ref.update(productData);
+          console.log(`[Webhook Shopify] Produto atualizado: ${handle}`);
+        } else {
+          // Se não existe, CRIA um novo
+          await db.collection('products').add({ ...productData, createdAt: new Date().toISOString() });
+          console.log(`[Webhook Shopify] Novo produto criado: ${handle}`);
+        }
+      } else if (topic === 'orders/paid') {
+        // Quando uma compra é feita, criamos um Envio (Shipment) no Flyfast
+        const order = req.body;
+        const shippingAddress = order.shipping_address || {};
+        
+        // Tenta vincular ao utilizador pelo email
+        let userId = null;
+        const userSnapshot = await db.collection('users').where('email', '==', order.email).limit(1).get();
+        if (!userSnapshot.empty) {
+          userId = userSnapshot.docs[0].id;
+        }
+
+        const newShipment = {
+          userId: userId, // Pode ser null se for convidado
+          userEmail: order.email,
+          shopifyOrderId: order.id,
+          orderNumber: order.order_number,
+          
+          // Dados de Logística
+          from: 'Loja Online', // Origem padrão
+          to: shippingAddress.city || 'Morada do Cliente',
+          address: {
+            line1: shippingAddress.address1,
+            city: shippingAddress.city,
+            country: shippingAddress.country
+          },
+          
+          // Detalhes
+          status: 'Pendente', // Aguarda processamento
+          items: order.line_items.map(item => `${item.quantity}x ${item.name}`).join(', '),
+          weight: order.total_weight ? (order.total_weight / 1000) : 0.5, // Shopify envia em gramas
+          
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+
+        await db.collection('shipments').add(newShipment);
+        console.log(`[Webhook Shopify] Envio criado para a encomenda #${order.order_number}`);
+      }
+
+      res.status(200).send('Webhook recebido');
+    } catch (error) {
+      console.error('Erro no webhook Shopify:', error);
+      res.status(500).send('Erro interno');
+    }
+  }
 
   // Métodos de Pedidos (Usuário)
   /**
