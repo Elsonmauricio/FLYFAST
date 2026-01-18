@@ -7,64 +7,68 @@ import { FaShoppingCart, FaExclamationTriangle, FaTimes, FaMinus, FaPlus, FaSear
 // --- Configurações de Internacionalização ---
 const TRANSLATIONS = {
   pt: {
-    freeShipping: "Envios grátis para compras acima de 50€",
     search: "Pesquisar",
     heroTitle: "Novas Coleções",
-    heroText: "Descubra as últimas tendências entre Luanda e Lisboa. Qualidade e rapidez na entrega.",
+    heroText: "Descubra as últimas tendências globais. Enviamos para todo o mundo com qualidade e rapidez.",
     buyNow: "Comprar Agora",
-    all: "Todos",
+    home: "Início",
+    catalog: "Catálogo",
     soldOut: "Esgotado",
     unavailable: "Indisponível",
     addToCart: "Adicionar ao carrinho",
     quantity: "Quantidade",
     errorTitle: "Erro de Conexão",
     errorText: "Verifique o seu Storefront Access Token.",
-    inStock: "Em Stock"
+    inStock: "Em Stock",
+    seeMore: "Ver Mais"
   },
   en: {
-    freeShipping: "Free shipping for orders over 50€",
     search: "Search",
     heroTitle: "New Collections",
-    heroText: "Discover the latest trends between Luanda and Lisbon. Quality and speed in delivery.",
+    heroText: "Discover the latest global trends. We ship worldwide with quality and speed.",
     buyNow: "Shop Now",
-    all: "All",
+    home: "Home",
+    catalog: "Catalog",
     soldOut: "Sold Out",
     unavailable: "Unavailable",
     addToCart: "Add to Cart",
     quantity: "Quantity",
     errorTitle: "Connection Error",
     errorText: "Check your Storefront Access Token.",
-    inStock: "In Stock"
+    inStock: "In Stock",
+    seeMore: "See More"
   },
   es: {
-    freeShipping: "Envío gratis para pedidos superiores a 50€",
     search: "Buscar",
     heroTitle: "Nuevas Colecciones",
-    heroText: "Descubre las últimas tendencias entre Luanda y Lisboa. Calidad y rapidez en la entrega.",
+    heroText: "Descubre las últimas tendencias globales. Enviamos a todo el mundo con calidad y rapidez.",
     buyNow: "Comprar Ahora",
-    all: "Todos",
+    home: "Inicio",
+    catalog: "Catálogo",
     soldOut: "Agotado",
     unavailable: "No disponible",
     addToCart: "Añadir al carrito",
     quantity: "Cantidad",
     errorTitle: "Error de Conexión",
     errorText: "Verifique su Token de Acceso.",
-    inStock: "En Stock"
+    inStock: "En Stock",
+    seeMore: "Ver Más"
   },
   fr: {
-    freeShipping: "Livraison gratuite pour les commandes de plus de 50€",
     search: "Rechercher",
     heroTitle: "Nouvelles Collections",
-    heroText: "Découvrez les dernières tendances entre Luanda et Lisbonne. Qualité et rapidité.",
+    heroText: "Découvrez les dernières tendances mondiales. Nous expédions dans le monde entier avec qualité et rapidité.",
     buyNow: "Acheter Maintenant",
-    all: "Tous",
+    home: "Accueil",
+    catalog: "Catalogue",
     soldOut: "Épuisé",
     unavailable: "Indisponible",
     addToCart: "Ajouter au panier",
     quantity: "Quantité",
     errorTitle: "Erreur de Connexion",
     errorText: "Vérifiez votre jeton d'accès.",
-    inStock: "En Stock"
+    inStock: "En Stock",
+    seeMore: "Voir Plus"
   }
 };
 
@@ -80,6 +84,8 @@ const ShopContent = () => {
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [gridSelections, setGridSelections] = useState({});
+  const [viewMode, setViewMode] = useState('home'); // 'home', 'catalog', 'collection'
+  const [visibleCount, setVisibleCount] = useState(8);
   
   // Estados de Internacionalização
   const [language, setLanguage] = useState('pt');
@@ -150,17 +156,121 @@ const ShopContent = () => {
   };
 
   const filteredProducts = products.filter(p => p.title.toLowerCase().includes(searchQuery.toLowerCase()));
+  
+  // Lógica de Agrupamento para o Catálogo
+  const productsByType = filteredProducts.reduce((acc, product) => {
+    const type = product.productType || 'Outros';
+    if (!acc[type]) acc[type] = [];
+    acc[type].push(product);
+    return acc;
+  }, {});
+  
+  const productTypes = Object.keys(productsByType).sort();
+
+  // Helper para renderizar o cartão do produto
+  const renderProductCard = (product) => {
+    const variant = gridSelections[product.id] || product.variants[0];
+    const isSoldOut = (variant && typeof variant.available !== 'undefined') ? !variant.available : !product.availableForSale;
+    
+    return (
+      <div key={product.id} className="group flex flex-col h-full">
+        <div 
+          className="relative w-full aspect-square bg-[#f5f5f5] overflow-hidden cursor-pointer rounded-xl md:rounded-2xl mb-3 md:mb-4"
+          onClick={() => { 
+            setSelectedProduct(product); 
+            setSelectedVariant(variant);
+            setCurrentImageIndex(0);
+            setQuantity(1);
+          }}
+        >
+          <img 
+            src={variant.image?.src || product.images[0]?.src} 
+            alt={product.title} 
+            className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 ${isSoldOut ? 'opacity-50' : ''}`}
+          />
+          {isSoldOut && (
+            <span className="absolute bottom-2 left-2 bg-white/90 backdrop-blur-sm text-[10px] font-bold px-2 py-1 rounded-md shadow-sm uppercase tracking-wide">{t('soldOut')}</span>
+          )}
+        </div>
+
+        <div className="flex flex-col flex-grow">
+            {product.vendor && (
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">{product.vendor}</p>
+            )}
+            <h2 
+                className="text-sm md:text-base font-serif font-medium text-gray-900 mb-1 cursor-pointer hover:underline decoration-1 underline-offset-2 line-clamp-1"
+                onClick={() => { 
+                    setSelectedProduct(product); 
+                    setSelectedVariant(variant);
+                    setCurrentImageIndex(0);
+                    setQuantity(1);
+                }}
+            >
+            {product.title}
+            </h2>
+            
+            <div className="mb-3 flex flex-col gap-2 mt-1">
+              {product.productType && (
+                <div className="text-[10px] font-medium text-gray-500 bg-gray-50 px-2 py-0.5 rounded w-fit">{product.productType}</div>
+              )}
+              
+              {product.options && product.options.map(opt => {
+                if (opt.name === 'Title') return null;
+                return (
+                  <div key={opt.id || opt.name} className="flex flex-col gap-1">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">{opt.name}</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {opt.values.map(val => {
+                        const isSelected = variant.selectedOptions.some(o => o.name === opt.name && o.value === val.value);
+                        return (
+                          <button 
+                            key={val.value} 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleGridOptionChange(product.id, opt.name, val.value);
+                            }}
+                            className={`inline-flex items-center px-2 py-1 rounded-md text-[10px] font-medium border shadow-sm transition-all ${
+                              isSelected 
+                                ? 'bg-gray-900 text-white border-gray-900' 
+                                : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+                            }`}
+                          >
+                            {val.value}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <p className="text-xs md:text-sm text-gray-600 mb-2 md:mb-3">
+            {variant.price.amount} {variant.price.currencyCode}
+            </p>
+
+            <button 
+            onClick={() => addItemToCart(variant.id, 1)}
+            disabled={isSoldOut}
+            className={`w-full py-2 md:py-2.5 rounded-lg md:rounded-xl font-medium text-xs md:text-sm transition-all border mt-auto ${
+                isSoldOut 
+                ? 'bg-gray-50 text-gray-400 border-gray-100 cursor-not-allowed' 
+                : 'bg-white text-black border-gray-300 hover:border-black hover:bg-black hover:text-white'
+            }`}
+            >
+            {isSoldOut ? t('unavailable') : t('addToCart')}
+            </button>
+        </div>
+      </div>
+    );
+  };
+
   // Encontrar o produto para o Hero (Destaque)
   const heroProduct = products.find(p => p.title.includes("Sniff Tote Bag - XXL"));
 
   return (
     <div className="min-h-screen bg-white font-sans text-gray-900 pb-20">
       
-      {/* 1. Barra de Aviso Superior (Verde Clara) */}
-      <div className="bg-[#DAEEDD] text-center py-2.5 text-xs uppercase tracking-widest font-medium text-gray-800">
-        {t('freeShipping')}
-      </div>
-
       {/* 2. Cabeçalho Funcional */}
       <header className="container mx-auto px-4 py-4 md:py-6 flex flex-col md:flex-row justify-between items-center gap-4 border-b border-transparent">
         <div className="flex items-center gap-2 md:gap-4 order-2 md:order-1 w-full md:w-auto justify-center md:justify-start">
@@ -201,6 +311,7 @@ const ShopContent = () => {
       </header>
 
       {/* 3. Hero Section (Bloco de texto colorido sobre imagem) */}
+      {viewMode !== 'catalog' && (
       <div className="container mx-auto px-4 my-8">
         <div className="relative w-full h-[350px] md:h-[500px] rounded-2xl md:rounded-3xl overflow-hidden bg-gray-100 shadow-sm">
            {heroProduct ? (
@@ -219,26 +330,40 @@ const ShopContent = () => {
              <p className="text-gray-700 mb-4 md:mb-5 leading-relaxed text-xs md:text-base">
                {t('heroText')}
              </p>
-             <button className="bg-black text-white px-5 py-2.5 md:px-6 md:py-3 rounded-lg md:rounded-xl font-medium hover:bg-gray-800 transition text-xs md:text-sm w-full md:w-auto">
+             <button 
+               onClick={() => { setViewMode('catalog'); setSelectedCollectionId(''); }}
+               className="bg-black text-white px-5 py-2.5 md:px-6 md:py-3 rounded-lg md:rounded-xl font-medium hover:bg-gray-800 transition text-xs md:text-sm w-full md:w-auto"
+             >
                {t('buyNow')}
              </button>
            </div>
         </div>
       </div>
+      )}
 
       <div className="container mx-auto px-4 py-8">
         {/* Filtros */}
         <div className="flex flex-wrap justify-center gap-2 md:gap-3 mb-8 md:mb-12">
+            {/* Botão Início */}
             <button
-              onClick={() => setSelectedCollectionId('')}
-              className={`px-4 py-1.5 md:px-5 md:py-2 rounded-full text-xs md:text-sm font-medium transition-all border ${selectedCollectionId === '' ? 'bg-black text-white border-black' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}
+              onClick={() => { setViewMode('home'); setSelectedCollectionId(''); setVisibleCount(8); }}
+              className={`px-4 py-1.5 md:px-5 md:py-2 rounded-full text-xs md:text-sm font-medium transition-all border ${viewMode === 'home' ? 'bg-black text-white border-black' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}
             >
-              {t('all')}
+              {t('home')}
             </button>
+
+            {/* Botão Catálogo */}
+            <button
+              onClick={() => { setViewMode('catalog'); setSelectedCollectionId(''); }}
+              className={`px-4 py-1.5 md:px-5 md:py-2 rounded-full text-xs md:text-sm font-medium transition-all border ${viewMode === 'catalog' ? 'bg-black text-white border-black' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}
+            >
+              {t('catalog')}
+            </button>
+
             {collections.map(col => (
               <button
                 key={col.id}
-                onClick={() => setSelectedCollectionId(col.id)}
+                onClick={() => { setViewMode('collection'); setSelectedCollectionId(col.id); }}
                 className={`px-4 py-1.5 md:px-5 md:py-2 rounded-full text-xs md:text-sm font-medium transition-all border ${selectedCollectionId === col.id ? 'bg-black text-white border-black' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}
               >
                 {col.title}
@@ -246,106 +371,37 @@ const ShopContent = () => {
             ))}
         </div>
 
-        {/* Grelha de Produtos */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-8 md:gap-x-6 md:gap-y-10">
-          {filteredProducts.map((product) => {
-            const variant = gridSelections[product.id] || product.variants[0];
-            const isSoldOut = (variant && typeof variant.available !== 'undefined') ? !variant.available : !product.availableForSale;
-            
-            return (
-              <div key={product.id} className="group flex flex-col h-full">
-                <div 
-                  className="relative w-full aspect-square bg-[#f5f5f5] overflow-hidden cursor-pointer rounded-xl md:rounded-2xl mb-3 md:mb-4"
-                  onClick={() => { 
-                    setSelectedProduct(product); 
-                    setSelectedVariant(variant);
-                    setCurrentImageIndex(0);
-                    setQuantity(1);
-                  }}
-                >
-                  <img 
-                    src={variant.image?.src || product.images[0]?.src} 
-                    alt={product.title} 
-                    className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 ${isSoldOut ? 'opacity-50' : ''}`}
-                  />
-                  {isSoldOut && (
-                    <span className="absolute bottom-2 left-2 bg-white/90 backdrop-blur-sm text-[10px] font-bold px-2 py-1 rounded-md shadow-sm uppercase tracking-wide">{t('soldOut')}</span>
-                  )}
-                </div>
-
-                <div className="flex flex-col flex-grow">
-                    {product.vendor && (
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">{product.vendor}</p>
-                    )}
-                    <h2 
-                        className="text-sm md:text-base font-serif font-medium text-gray-900 mb-1 cursor-pointer hover:underline decoration-1 underline-offset-2 line-clamp-1"
-                        onClick={() => { 
-                            setSelectedProduct(product); 
-                            setSelectedVariant(variant);
-                            setCurrentImageIndex(0);
-                            setQuantity(1);
-                        }}
-                    >
-                    {product.title}
-                    </h2>
-                    
-                    {/* Informações do Produto (Tipo, Tamanho, Cor, etc.) */}
-                    <div className="mb-3 flex flex-col gap-2 mt-1">
-                      {product.productType && (
-                        <div className="text-[10px] font-medium text-gray-500 bg-gray-50 px-2 py-0.5 rounded w-fit">{product.productType}</div>
-                      )}
-                      
-                      {product.options && product.options.map(opt => {
-                        if (opt.name === 'Title') return null;
-                        return (
-                          <div key={opt.id || opt.name} className="flex flex-col gap-1">
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">{opt.name}</span>
-                            <div className="flex flex-wrap gap-1.5">
-                              {opt.values.map(val => {
-                                const isSelected = variant.selectedOptions.some(o => o.name === opt.name && o.value === val.value);
-                                return (
-                                  <button 
-                                    key={val.value} 
-                                    onClick={(e) => {
-                                      e.stopPropagation(); // Impede que abra o modal ao clicar na opção
-                                      handleGridOptionChange(product.id, opt.name, val.value);
-                                    }}
-                                    className={`inline-flex items-center px-2 py-1 rounded-md text-[10px] font-medium border shadow-sm transition-all ${
-                                      isSelected 
-                                        ? 'bg-gray-900 text-white border-gray-900' 
-                                        : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
-                                    }`}
-                                  >
-                                    {val.value}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <p className="text-xs md:text-sm text-gray-600 mb-2 md:mb-3">
-                    {variant.price.amount} {variant.price.currencyCode}
-                    </p>
-
-                    <button 
-                    onClick={() => addItemToCart(variant.id, 1)}
-                    disabled={isSoldOut}
-                    className={`w-full py-2 md:py-2.5 rounded-lg md:rounded-xl font-medium text-xs md:text-sm transition-all border mt-auto ${
-                        isSoldOut 
-                        ? 'bg-gray-50 text-gray-400 border-gray-100 cursor-not-allowed' 
-                        : 'bg-white text-black border-gray-300 hover:border-black hover:bg-black hover:text-white'
-                    }`}
-                    >
-                    {isSoldOut ? t('unavailable') : t('addToCart')}
-                    </button>
+        {/* Grelha de Produtos ou Catálogo por Tipo */}
+        {(viewMode === 'catalog' && !searchQuery) ? (
+          // Modo Catálogo (Agrupado por Tipo)
+          <div className="space-y-16">
+            {productTypes.map(type => (
+              <div key={type}>
+                <h2 className="text-2xl font-serif font-medium text-gray-900 mb-6 border-b border-gray-100 pb-4">{type}</h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-8 md:gap-x-6 md:gap-y-10">
+                  {productsByType[type].map(product => renderProductCard(product))}
                 </div>
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        ) : (
+          // Modo Filtro/Busca (Flat Grid)
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-8 md:gap-x-6 md:gap-y-10">
+              {(viewMode === 'home' && !searchQuery ? filteredProducts.slice(0, visibleCount) : filteredProducts).map(product => renderProductCard(product))}
+            </div>
+            {viewMode === 'home' && !searchQuery && visibleCount < filteredProducts.length && (
+              <div className="flex justify-center mt-12">
+                <button 
+                  onClick={() => setVisibleCount(prev => prev + 8)}
+                  className="px-8 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-full font-medium transition-colors"
+                >
+                  {t('seeMore')}
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Modal Quick View (Atualizado para rounded-3xl e font-serif) */}
