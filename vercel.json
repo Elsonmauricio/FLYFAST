@@ -19,11 +19,19 @@
       "dest": "/flyfast-backend/index.js"
     },
     {
+      "src": "/static/(.*)",
+      "dest": "/flyfast-frontend/static/$1"
+    },
+    {
+      "src": "/(.*\\..*)",
+      "dest": "/flyfast-frontend/$1"
+    },
+    {
       "handle": "filesystem"
     },
     {
       "src": "/(.*)",
-      "dest": "/index.html"
+      "dest": "/flyfast-frontend/index.html"
     }
   ]
 }
