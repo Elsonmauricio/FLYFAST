@@ -72,6 +72,14 @@ const TRANSLATIONS = {
   }
 };
 
+// Lista extensa de idiomas
+const ALL_LANGUAGES = [
+  { code: 'pt', name: 'Português' },
+  { code: 'en', name: 'English' },
+  { code: 'es', name: 'Español' },
+  { code: 'fr', name: 'Français' }
+];
+
 const ShopContent = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -93,7 +101,11 @@ const ShopContent = () => {
   const { addItemToCart, setIsCartOpen, checkout } = useShopifyCart();
 
   // Helper de Tradução
-  const t = (key) => TRANSLATIONS[language][key] || key;
+  const t = (key) => {
+    // Tenta encontrar a tradução no idioma selecionado, senão usa Português como fallback
+    const dict = TRANSLATIONS[language] || TRANSLATIONS['pt'];
+    return dict[key] || TRANSLATIONS['pt'][key] || key;
+  };
 
   useEffect(() => {
     client.collection.fetchAll().then((fetchedCollections) => {
@@ -279,10 +291,9 @@ const ShopContent = () => {
              onChange={(e) => setLanguage(e.target.value)}
              className="bg-transparent text-xs md:text-sm border-none outline-none cursor-pointer text-gray-600 hover:text-black hover:bg-gray-50 px-2 py-1 rounded-lg transition-colors"
            >
-             <option value="pt">Português</option>
-             <option value="en">English</option>
-             <option value="es">Español</option>
-             <option value="fr">Français</option>
+             {ALL_LANGUAGES.map(lang => (
+               <option key={lang.code} value={lang.code}>{lang.name}</option>
+             ))}
            </select>
         </div>
 
