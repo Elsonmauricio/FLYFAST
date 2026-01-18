@@ -2,7 +2,71 @@ import React, { useEffect, useState } from 'react';
 import client from '../lib/shopify';
 import { ShopifyCartProvider, useShopifyCart } from '../contexts/ShopifyCartContext';
 import CartDrawer from '../components/CartDrawer';
-import { FaShoppingCart, FaExclamationTriangle, FaTimes, FaInfoCircle, FaMinus, FaPlus, FaSearch } from 'react-icons/fa';
+import { FaShoppingCart, FaExclamationTriangle, FaTimes, FaMinus, FaPlus, FaSearch } from 'react-icons/fa';
+
+// --- Configurações de Internacionalização ---
+const TRANSLATIONS = {
+  pt: {
+    freeShipping: "Envios grátis para compras acima de 50€",
+    search: "Pesquisar",
+    heroTitle: "Novas Coleções",
+    heroText: "Descubra as últimas tendências entre Luanda e Lisboa. Qualidade e rapidez na entrega.",
+    buyNow: "Comprar Agora",
+    all: "Todos",
+    soldOut: "Esgotado",
+    unavailable: "Indisponível",
+    addToCart: "Adicionar ao carrinho",
+    quantity: "Quantidade",
+    errorTitle: "Erro de Conexão",
+    errorText: "Verifique o seu Storefront Access Token.",
+    inStock: "Em Stock"
+  },
+  en: {
+    freeShipping: "Free shipping for orders over 50€",
+    search: "Search",
+    heroTitle: "New Collections",
+    heroText: "Discover the latest trends between Luanda and Lisbon. Quality and speed in delivery.",
+    buyNow: "Shop Now",
+    all: "All",
+    soldOut: "Sold Out",
+    unavailable: "Unavailable",
+    addToCart: "Add to Cart",
+    quantity: "Quantity",
+    errorTitle: "Connection Error",
+    errorText: "Check your Storefront Access Token.",
+    inStock: "In Stock"
+  },
+  es: {
+    freeShipping: "Envío gratis para pedidos superiores a 50€",
+    search: "Buscar",
+    heroTitle: "Nuevas Colecciones",
+    heroText: "Descubre las últimas tendencias entre Luanda y Lisboa. Calidad y rapidez en la entrega.",
+    buyNow: "Comprar Ahora",
+    all: "Todos",
+    soldOut: "Agotado",
+    unavailable: "No disponible",
+    addToCart: "Añadir al carrito",
+    quantity: "Cantidad",
+    errorTitle: "Error de Conexión",
+    errorText: "Verifique su Token de Acceso.",
+    inStock: "En Stock"
+  },
+  fr: {
+    freeShipping: "Livraison gratuite pour les commandes de plus de 50€",
+    search: "Rechercher",
+    heroTitle: "Nouvelles Collections",
+    heroText: "Découvrez les dernières tendances entre Luanda et Lisbonne. Qualité et rapidité.",
+    buyNow: "Acheter Maintenant",
+    all: "Tous",
+    soldOut: "Épuisé",
+    unavailable: "Indisponible",
+    addToCart: "Ajouter au panier",
+    quantity: "Quantité",
+    errorTitle: "Erreur de Connexion",
+    errorText: "Vérifiez votre jeton d'accès.",
+    inStock: "En Stock"
+  }
+};
 
 const ShopContent = () => {
   const [products, setProducts] = useState([]);
@@ -15,12 +79,18 @@ const ShopContent = () => {
   const [quantity, setQuantity] = useState(1);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [gridSelections, setGridSelections] = useState({});
+  
+  // Estados de Internacionalização
+  const [language, setLanguage] = useState('pt');
+
   const { addItemToCart, setIsCartOpen, checkout } = useShopifyCart();
 
+  // Helper de Tradução
+  const t = (key) => TRANSLATIONS[language][key] || key;
+
   useEffect(() => {
-    // Busca todas as coleções da Shopify
     client.collection.fetchAll().then((fetchedCollections) => {
-      // Filtra a coleção "Página inicial" (ou "Home page") para não aparecer nos filtros
       const filtered = fetchedCollections.filter(c => c.title !== 'Página inicial' && c.title !== 'Home page');
       setCollections(filtered);
     }).catch(err => console.error("Erro ao buscar coleções:", err));
@@ -28,17 +98,14 @@ const ShopContent = () => {
 
   useEffect(() => {
     setLoading(true);
-    
     const fetchPromise = selectedCollectionId 
       ? client.collection.fetchWithProducts(selectedCollectionId, {productsFirst: 250}).then(col => col.products)
       : client.product.fetchAll(250);
 
     fetchPromise.then((fetchedProducts) => {
-      console.log("✅ Produtos carregados com sucesso:", fetchedProducts);
       setProducts(fetchedProducts);
       setLoading(false);
     }).catch((err) => {
-      console.error("Erro ao buscar produtos na Shopify:", err);
       setError(err);
       setLoading(false);
     });
@@ -46,292 +113,350 @@ const ShopContent = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex justify-center items-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen flex justify-center items-center bg-white">
+        <div className="w-8 h-8 border-2 border-gray-200 border-t-black rounded-full animate-spin"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex flex-col justify-center items-center bg-gray-50 p-4 text-center">
-        <FaExclamationTriangle className="text-5xl text-red-500 mb-4" />
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">Não foi possível carregar a loja</h2>
-        <p className="text-gray-600 mb-6 max-w-md">
-          Ocorreu um erro de conexão com o Shopify (CORS).
-        </p>
-        <div className="bg-white p-6 rounded-lg shadow-md text-left text-sm text-gray-700 max-w-lg border-l-4 border-red-500">
-          <p className="font-bold mb-2 text-red-600">Diagnóstico:</p>
-          <p className="mb-2">O navegador bloqueou o acesso à API da Shopify. Isto acontece quase sempre por <strong>configuração incorreta do Token</strong>.</p>
-          <ul className="list-disc pl-5 space-y-1">
-            <li>Verifique se está a usar o <strong>Storefront Access Token</strong> (Público).</li>
-            <li>Não use o <strong>Admin API Token</strong> (Começa por <code>shpat_</code>) no frontend.</li>
-            <li>Confirme se a App no Shopify tem a "Storefront API" ativada.</li>
-          </ul>
-        </div>
+      <div className="min-h-screen flex flex-col justify-center items-center bg-white p-4">
+        <FaExclamationTriangle className="text-2xl text-gray-400 mb-4" />
+        <h2 className="text-xl font-light uppercase tracking-widest">{t('errorTitle')}</h2>
+        <p className="text-gray-500 mt-2">{t('errorText')}</p>
       </div>
     );
   }
 
+  // Função para alterar a variante selecionada no cartão
+  const handleGridOptionChange = (productId, optionName, optionValue) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+
+    const currentVariant = gridSelections[productId] || product.variants[0];
+    
+    // Encontra a nova variante mantendo as outras opções (ex: mantém o tamanho M, muda só a cor)
+    const newVariant = product.variants.find(v => 
+      v.selectedOptions.every(opt => 
+        opt.name === optionName ? opt.value === optionValue : 
+        opt.value === currentVariant.selectedOptions.find(o => o.name === opt.name)?.value
+      )
+    );
+
+    if (newVariant) {
+      setGridSelections(prev => ({ ...prev, [productId]: newVariant }));
+    }
+  };
+
+  const filteredProducts = products.filter(p => p.title.toLowerCase().includes(searchQuery.toLowerCase()));
+  // Encontrar o produto para o Hero (Destaque)
+  const heroProduct = products.find(p => p.title.includes("Sniff Tote Bag - XXL"));
+
   return (
-    <div className="min-h-screen bg-gray-50 py-12 relative">
-      {/* Botão Flutuante do Carrinho */}
-      <button 
-        onClick={() => setIsCartOpen(true)} 
-        className="fixed bottom-8 right-8 bg-flyfast-blue text-white p-4 rounded-full shadow-lg z-40 hover:bg-blue-800 transition-colors flex items-center justify-center"
-      >
-        <FaShoppingCart size={24} />
-        {checkout?.lineItems?.length > 0 && (
-          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center border-2 border-white">
-            {checkout.lineItems.length}
-          </span>
-        )}
-      </button>
-
-      <div className="container mx-auto px-4">
-        <h1 className="text-4xl font-bold text-flyfast-blue mb-8 text-center">Flyfast-Market</h1>
-        
-        {/* Barra de Pesquisa */}
-        <div className="max-w-md mx-auto mb-8 relative">
-          <input
-            type="text"
-            placeholder="Pesquisar produtos..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-flyfast-blue focus:border-transparent shadow-sm"
-          />
-          <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-        </div>
-
-        {/* Filtros de Coleção */}
-        <div className="flex flex-wrap justify-center gap-3 mb-8">
-          <button
-            onClick={() => setSelectedCollectionId('')}
-            className={`px-4 py-2 rounded-full text-sm font-bold transition-colors ${
-              selectedCollectionId === '' 
-                ? 'bg-flyfast-blue text-white shadow-md' 
-                : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-            }`}
-          >
-            Todos
-          </button>
-          {collections.map(collection => (
-            <button
-              key={collection.id}
-              onClick={() => setSelectedCollectionId(collection.id)}
-              className={`px-4 py-2 rounded-full text-sm font-bold transition-colors ${
-                selectedCollectionId === collection.id
-                  ? 'bg-flyfast-blue text-white shadow-md'
-                  : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-              }`}
-            >
-              {collection.title}
-            </button>
-          ))}
-        </div>
-
-        {products.length === 0 && !loading ? (
-          <div className="text-center py-16">
-            <div className="text-6xl mb-6">📦</div>
-            <p className="text-xl text-gray-600">Nenhum produto disponível no momento.</p>
-          </div>
-        ) : products.filter(p => p.title.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 ? (
-          <div className="text-center py-16">
-            <div className="text-6xl mb-6">🔍</div>
-            <p className="text-xl text-gray-600">Nenhum produto encontrado para "{searchQuery}".</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {products.filter(p => p.title.toLowerCase().includes(searchQuery.toLowerCase())).map((product) => (
-              <div key={product.id} className="bg-white rounded-xl shadow-md hover:shadow-2xl transition-all duration-300 flex flex-col transform hover:-translate-y-1 border border-gray-100">
-                {/* Imagem do Produto */}
-                {product.images && product.images.length > 0 && (
-                  <div 
-                    className="h-48 sm:h-64 overflow-hidden bg-gray-100 relative group cursor-pointer"
-                    onClick={() => { 
-                      setSelectedProduct(product); 
-                      setQuantity(1); 
-                      setSelectedVariant(product.variants[0]);
-                      setCurrentImageIndex(0);
-                    }}
-                  >
-                    <img 
-                      src={product.images[0].src} 
-                      alt={product.title} 
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    />
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 flex items-center justify-center">
-                      <span className="bg-white text-flyfast-blue px-4 py-2 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 font-bold text-sm shadow-lg transform translate-y-4 group-hover:translate-y-0 flex items-center gap-2">
-                        <FaInfoCircle /> Ver Detalhes
-                      </span>
-                    </div>
-                  </div>
-                )}
-                
-                <div className="p-5 flex-1 flex flex-col">
-                  <h2 
-                    className="text-lg font-bold text-gray-900 mb-1 line-clamp-1 cursor-pointer hover:text-flyfast-blue transition-colors" 
-                    title={product.title}
-                    onClick={() => { 
-                      setSelectedProduct(product); 
-                      setQuantity(1); 
-                      setSelectedVariant(product.variants[0]);
-                      setCurrentImageIndex(0);
-                    }}
-                  >
-                    {product.title}
-                  </h2>
-                  <p className="text-gray-500 text-sm mb-4 line-clamp-2 flex-1">
-                    {product.description}
-                  </p>
-                  
-                  <div className="flex flex-col sm:flex-row justify-between items-center mt-auto pt-4 border-t border-gray-100 gap-3">
-                    <span className="text-xl font-extrabold text-flyfast-blue">
-                      {product.variants[0].price.amount} {product.variants[0].price.currencyCode}
-                    </span>
-                    
-                    {/* Botão de Adicionar ao Carrinho */}
-                    <button 
-                      onClick={() => addItemToCart(product.variants[0].id, 1)}
-                      className="w-full sm:w-auto bg-flyfast-yellow text-flyfast-blue px-4 py-2 rounded-lg font-bold hover:bg-yellow-400 transition-colors flex items-center justify-center gap-2 text-sm shadow-sm hover:shadow"
-                    >
-                      <FaShoppingCart /> Adicionar
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+    <div className="min-h-screen bg-white font-sans text-gray-900 pb-20">
+      
+      {/* 1. Barra de Aviso Superior (Verde Clara) */}
+      <div className="bg-[#DAEEDD] text-center py-2.5 text-xs uppercase tracking-widest font-medium text-gray-800">
+        {t('freeShipping')}
       </div>
 
-      {/* Modal de Detalhes do Produto */}
-      {selectedProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-          <div 
-            className="absolute inset-0 bg-black bg-opacity-60 backdrop-blur-sm transition-opacity" 
-            onClick={() => setSelectedProduct(null)}
-          ></div>
-          
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col md:flex-row relative z-10 animate-fade-in-up">
-            <button 
-              onClick={() => setSelectedProduct(null)}
-              className="absolute top-4 right-4 z-20 bg-white/80 hover:bg-white text-gray-500 hover:text-gray-800 p-2 rounded-full transition-colors shadow-sm"
+      {/* 2. Cabeçalho Funcional */}
+      <header className="container mx-auto px-4 py-4 md:py-6 flex flex-col md:flex-row justify-between items-center gap-4 border-b border-transparent">
+        <div className="flex items-center gap-2 md:gap-4 order-2 md:order-1 w-full md:w-auto justify-center md:justify-start">
+           <select 
+             value={language}
+             onChange={(e) => setLanguage(e.target.value)}
+             className="bg-transparent text-xs md:text-sm border-none outline-none cursor-pointer text-gray-600 hover:text-black hover:bg-gray-50 px-2 py-1 rounded-lg transition-colors"
+           >
+             <option value="pt">Português</option>
+             <option value="en">English</option>
+             <option value="es">Español</option>
+             <option value="fr">Français</option>
+           </select>
+        </div>
+
+        <h1 className="text-2xl md:text-3xl font-serif font-medium text-gray-900 order-1 md:order-2">Flyfast Market</h1>
+
+        <div className="flex items-center gap-4 order-3">
+           <div className="relative">
+             <input
+               type="text"
+               placeholder={t('search')}
+               value={searchQuery}
+               onChange={(e) => setSearchQuery(e.target.value)}
+               className="bg-gray-100 rounded-full py-2 px-4 pl-4 pr-8 text-xs md:text-sm focus:ring-1 focus:ring-black outline-none w-32 focus:w-40 md:focus:w-48 transition-all placeholder-gray-500"
+             />
+             <FaSearch className="absolute right-3 top-2.5 text-gray-400 text-xs" />
+           </div>
+           <button onClick={() => setIsCartOpen(true)} className="relative p-2">
+             <FaShoppingCart size={20} className="text-gray-700 hover:text-black transition" />
+             {checkout?.lineItems?.length > 0 && (
+               <span className="absolute top-0 right-0 bg-black text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                 {checkout.lineItems.length}
+               </span>
+             )}
+           </button>
+        </div>
+      </header>
+
+      {/* 3. Hero Section (Bloco de texto colorido sobre imagem) */}
+      <div className="container mx-auto px-4 my-8">
+        <div className="relative w-full h-[350px] md:h-[500px] rounded-2xl md:rounded-3xl overflow-hidden bg-gray-100 shadow-sm">
+           {heroProduct ? (
+             <img 
+               src={heroProduct.images[0]?.src} 
+               alt="Hero" 
+               className="w-full h-full object-contain object-right p-6 mix-blend-multiply"
+             />
+           ) : (
+             <div className="w-full h-full bg-gray-200"></div>
+           )}
+           <div className="absolute bottom-4 left-4 right-4 md:right-auto md:bottom-12 md:left-12 bg-[#F3E5F5]/95 backdrop-blur-sm p-6 md:p-10 rounded-xl md:rounded-2xl max-w-md shadow-sm">
+             <h2 className="text-xl md:text-3xl font-serif font-medium mb-2 md:mb-3 text-gray-900">
+               {t('heroTitle')}
+             </h2>
+             <p className="text-gray-700 mb-4 md:mb-5 leading-relaxed text-xs md:text-base">
+               {t('heroText')}
+             </p>
+             <button className="bg-black text-white px-5 py-2.5 md:px-6 md:py-3 rounded-lg md:rounded-xl font-medium hover:bg-gray-800 transition text-xs md:text-sm w-full md:w-auto">
+               {t('buyNow')}
+             </button>
+           </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-8">
+        {/* Filtros */}
+        <div className="flex flex-wrap justify-center gap-2 md:gap-3 mb-8 md:mb-12">
+            <button
+              onClick={() => setSelectedCollectionId('')}
+              className={`px-4 py-1.5 md:px-5 md:py-2 rounded-full text-xs md:text-sm font-medium transition-all border ${selectedCollectionId === '' ? 'bg-black text-white border-black' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}
             >
+              {t('all')}
+            </button>
+            {collections.map(col => (
+              <button
+                key={col.id}
+                onClick={() => setSelectedCollectionId(col.id)}
+                className={`px-4 py-1.5 md:px-5 md:py-2 rounded-full text-xs md:text-sm font-medium transition-all border ${selectedCollectionId === col.id ? 'bg-black text-white border-black' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}
+              >
+                {col.title}
+              </button>
+            ))}
+        </div>
+
+        {/* Grelha de Produtos */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-8 md:gap-x-6 md:gap-y-10">
+          {filteredProducts.map((product) => {
+            const variant = gridSelections[product.id] || product.variants[0];
+            const isSoldOut = (variant && typeof variant.available !== 'undefined') ? !variant.available : !product.availableForSale;
+            
+            return (
+              <div key={product.id} className="group flex flex-col h-full">
+                <div 
+                  className="relative w-full aspect-square bg-[#f5f5f5] overflow-hidden cursor-pointer rounded-xl md:rounded-2xl mb-3 md:mb-4"
+                  onClick={() => { 
+                    setSelectedProduct(product); 
+                    setSelectedVariant(variant);
+                    setCurrentImageIndex(0);
+                    setQuantity(1);
+                  }}
+                >
+                  <img 
+                    src={variant.image?.src || product.images[0]?.src} 
+                    alt={product.title} 
+                    className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 ${isSoldOut ? 'opacity-50' : ''}`}
+                  />
+                  {isSoldOut && (
+                    <span className="absolute bottom-2 left-2 bg-white/90 backdrop-blur-sm text-[10px] font-bold px-2 py-1 rounded-md shadow-sm uppercase tracking-wide">{t('soldOut')}</span>
+                  )}
+                </div>
+
+                <div className="flex flex-col flex-grow">
+                    {product.vendor && (
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">{product.vendor}</p>
+                    )}
+                    <h2 
+                        className="text-sm md:text-base font-serif font-medium text-gray-900 mb-1 cursor-pointer hover:underline decoration-1 underline-offset-2 line-clamp-1"
+                        onClick={() => { 
+                            setSelectedProduct(product); 
+                            setSelectedVariant(variant);
+                            setCurrentImageIndex(0);
+                            setQuantity(1);
+                        }}
+                    >
+                    {product.title}
+                    </h2>
+                    
+                    {/* Informações do Produto (Tipo, Tamanho, Cor, etc.) */}
+                    <div className="mb-3 flex flex-col gap-2 mt-1">
+                      {product.productType && (
+                        <div className="text-[10px] font-medium text-gray-500 bg-gray-50 px-2 py-0.5 rounded w-fit">{product.productType}</div>
+                      )}
+                      
+                      {product.options && product.options.map(opt => {
+                        if (opt.name === 'Title') return null;
+                        return (
+                          <div key={opt.id || opt.name} className="flex flex-col gap-1">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">{opt.name}</span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {opt.values.map(val => {
+                                const isSelected = variant.selectedOptions.some(o => o.name === opt.name && o.value === val.value);
+                                return (
+                                  <button 
+                                    key={val.value} 
+                                    onClick={(e) => {
+                                      e.stopPropagation(); // Impede que abra o modal ao clicar na opção
+                                      handleGridOptionChange(product.id, opt.name, val.value);
+                                    }}
+                                    className={`inline-flex items-center px-2 py-1 rounded-md text-[10px] font-medium border shadow-sm transition-all ${
+                                      isSelected 
+                                        ? 'bg-gray-900 text-white border-gray-900' 
+                                        : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'
+                                    }`}
+                                  >
+                                    {val.value}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <p className="text-xs md:text-sm text-gray-600 mb-2 md:mb-3">
+                    {variant.price.amount} {variant.price.currencyCode}
+                    </p>
+
+                    <button 
+                    onClick={() => addItemToCart(variant.id, 1)}
+                    disabled={isSoldOut}
+                    className={`w-full py-2 md:py-2.5 rounded-lg md:rounded-xl font-medium text-xs md:text-sm transition-all border mt-auto ${
+                        isSoldOut 
+                        ? 'bg-gray-50 text-gray-400 border-gray-100 cursor-not-allowed' 
+                        : 'bg-white text-black border-gray-300 hover:border-black hover:bg-black hover:text-white'
+                    }`}
+                    >
+                    {isSoldOut ? t('unavailable') : t('addToCart')}
+                    </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Modal Quick View (Atualizado para rounded-3xl e font-serif) */}
+      {selectedProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSelectedProduct(null)}></div>
+          
+          <div className="bg-white w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col md:flex-row relative shadow-2xl rounded-3xl animate-fade-in-up">
+            <button onClick={() => setSelectedProduct(null)} className="absolute top-4 right-4 z-30 p-2 bg-white/80 rounded-full hover:bg-white transition text-gray-600 hover:text-black">
               <FaTimes size={20} />
             </button>
 
-            {/* Lado da Imagem */}
-            <div className="w-full md:w-1/2 bg-gray-100 relative h-64 md:h-auto">
-              {selectedProduct.images && selectedProduct.images.length > 0 ? (
-                <div className="h-full flex flex-col">
-                  <img 
-                    src={selectedProduct.images[currentImageIndex].src} 
-                    alt={selectedProduct.title} 
-                    className="w-full flex-1 object-cover"
-                  />
-                  {/* Galeria de Miniaturas */}
-                  {selectedProduct.images.length > 1 && (
-                    <div className="flex gap-2 p-2 overflow-x-auto bg-white border-t">
-                      {selectedProduct.images.map((img, idx) => (
-                        <button key={img.id} onClick={() => setCurrentImageIndex(idx)} className={`w-16 h-16 flex-shrink-0 border-2 rounded overflow-hidden ${currentImageIndex === idx ? 'border-flyfast-blue' : 'border-transparent'}`}>
-                          <img src={img.src} alt="" className="w-full h-full object-cover" />
-                        </button>
-                      ))}
-                    </div>
-                  )}
+            {/* Galeria à Esquerda */}
+            <div className="w-full md:w-1/2 bg-[#f5f5f5] flex flex-col p-6 gap-4">
+              <div className="flex-1 flex items-center justify-center relative overflow-hidden">
+                <img 
+                  src={selectedProduct.images[currentImageIndex]?.src} 
+                  className="w-full h-full object-contain mix-blend-multiply max-h-[50vh]"
+                  alt={selectedProduct.title}
+                />
+              </div>
+              {selectedProduct.images.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto pb-2 justify-center px-4">
+                  {selectedProduct.images.map((img, i) => (
+                    <button 
+                        key={i} 
+                        onClick={() => setCurrentImageIndex(i)}
+                        className={`w-16 h-16 flex-shrink-0 rounded-lg border-2 overflow-hidden transition-all ${currentImageIndex === i ? 'border-black' : 'border-transparent hover:border-gray-300'}`}
+                    >
+                      <img src={img.src} className="w-full h-full object-cover" alt={`Thumbnail ${i}`} />
+                    </button>
+                  ))}
                 </div>
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-400">Sem imagem</div>
               )}
             </div>
 
-            {/* Lado do Conteúdo */}
-            <div className="w-full md:w-1/2 p-6 md:p-10 flex flex-col overflow-y-auto bg-white">
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">{selectedProduct.title}</h2>
-              
-              <div className="flex items-center gap-4 mb-6 border-b border-gray-100 pb-4">
-                <span className="text-3xl font-extrabold text-flyfast-blue">
-                  {selectedVariant ? selectedVariant.price.amount : selectedProduct.variants[0].price.amount} {selectedVariant ? selectedVariant.price.currencyCode : selectedProduct.variants[0].price.currencyCode}
-                </span>
-                <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                  Em Stock
-                </span>
-              </div>
+            {/* Info à Direita */}
+            <div className="w-full md:w-1/2 p-8 md:p-12 overflow-y-auto flex flex-col">
+              <h2 className="text-3xl font-serif font-medium mb-2 text-gray-900">{selectedProduct.title}</h2>
+              <p className="text-2xl text-gray-600 mb-6 font-light">
+                {selectedVariant?.price.amount || selectedProduct.variants[0].price.amount} {selectedProduct.variants[0].price.currencyCode}
+              </p>
 
-              {/* Seletor de Variantes */}
-              {selectedProduct.variants.length > 1 && (
-                <div className="mb-6">
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Opções:</label>
-                  <select 
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-flyfast-blue outline-none bg-white"
-                    value={selectedVariant?.id}
-                    onChange={(e) => {
-                      const variant = selectedProduct.variants.find(v => v.id === e.target.value);
-                      setSelectedVariant(variant);
-                      // Tenta encontrar a imagem associada à variante
-                      if (variant.image) {
-                        const imgIndex = selectedProduct.images.findIndex(img => img.id === variant.image.id);
-                        if (imgIndex !== -1) setCurrentImageIndex(imgIndex);
-                      }
-                    }}
-                  >
-                    {selectedProduct.variants.map(variant => (
-                      <option key={variant.id} value={variant.id}>
-                        {variant.title}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <div className="prose prose-blue text-gray-600 mb-8 flex-1 overflow-y-auto pr-2">
-                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-2">Descrição</h3>
-                {selectedProduct.descriptionHtml ? (
-                  <div 
-                    className="whitespace-pre-line leading-relaxed text-base"
-                    dangerouslySetInnerHTML={{ __html: selectedProduct.descriptionHtml }} 
-                  />
-                ) : (
-                  <p className="whitespace-pre-line leading-relaxed text-base">
-                    {selectedProduct.description || "Sem descrição disponível para este produto."}
-                  </p>
-                )}
-              </div>
-
-              <div className="mt-auto pt-6 border-t border-gray-100">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="font-bold text-gray-700">Quantidade:</span>
-                  <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
-                    <button 
-                      className="px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-600 transition-colors disabled:opacity-50"
-                      onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                      disabled={quantity <= 1}
-                    >
-                      <FaMinus size={12} />
-                    </button>
-                    <span className="px-4 py-2 font-bold text-gray-800 min-w-[3rem] text-center">{quantity}</span>
-                    <button 
-                      className="px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-600 transition-colors"
-                      onClick={() => setQuantity(q => q + 1)}
-                    >
-                      <FaPlus size={12} />
-                    </button>
+              {/* Seletor de Variantes no Modal */}
+              {selectedProduct.options && selectedProduct.options.map(opt => {
+                if (opt.name === 'Title') return null;
+                return (
+                  <div key={opt.id || opt.name} className="mb-6">
+                    <span className="text-sm font-bold text-gray-900 uppercase tracking-wide block mb-3">{opt.name}</span>
+                    <div className="flex flex-wrap gap-2">
+                      {opt.values.map(val => {
+                        const isSelected = selectedVariant?.selectedOptions.some(o => o.name === opt.name && o.value === val.value);
+                        return (
+                          <button
+                            key={val.value}
+                            onClick={() => {
+                                const newVariant = selectedProduct.variants.find(v => 
+                                    v.selectedOptions.every(o => 
+                                        o.name === opt.name ? o.value === val.value : 
+                                        o.value === selectedVariant.selectedOptions.find(so => so.name === o.name)?.value
+                                    )
+                                );
+                                if (newVariant) {
+                                    setSelectedVariant(newVariant);
+                                    if (newVariant.image) {
+                                        const imgIndex = selectedProduct.images.findIndex(img => img.id === newVariant.image.id);
+                                        if (imgIndex !== -1) setCurrentImageIndex(imgIndex);
+                                    }
+                                }
+                            }}
+                            className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all ${
+                              isSelected 
+                                ? 'bg-black text-white border-black shadow-md' 
+                                : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400 hover:bg-gray-50'
+                            }`}
+                          >
+                            {val.value}
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
+                );
+              })}
+
+              <div className="space-y-6 mb-8 flex-1">
+                <div className="text-sm leading-relaxed text-gray-600 prose prose-sm max-w-none [&_table]:w-full [&_table]:border-collapse [&_table]:mb-4 [&_th]:border [&_th]:border-gray-200 [&_th]:p-2 [&_th]:bg-gray-50 [&_th]:text-left [&_td]:border [&_td]:border-gray-200 [&_td]:p-2" 
+                     dangerouslySetInnerHTML={{ __html: selectedProduct.descriptionHtml || selectedProduct.description }}>
                 </div>
+              </div>
+
+              <div className="space-y-4 mt-auto pt-6 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700">{t('quantity')}</span>
+                    <div className="flex items-center border border-gray-300 rounded-lg">
+                    <button className="p-3 hover:bg-gray-50 text-gray-600" onClick={() => setQuantity(q => Math.max(1, q - 1))}><FaMinus size={10}/></button>
+                    <span className="px-4 text-sm font-medium">{quantity}</span>
+                    <button className="p-3 hover:bg-gray-50 text-gray-600" onClick={() => setQuantity(q => q + 1)}><FaPlus size={10}/></button>
+                    </div>
+                </div>
+
                 <button 
                   onClick={() => {
-                    addItemToCart(selectedVariant ? selectedVariant.id : selectedProduct.variants[0].id, quantity);
+                    addItemToCart(selectedVariant?.id || selectedProduct.variants[0].id, quantity);
                     setSelectedProduct(null);
+                    setIsCartOpen(true);
                   }}
-                  className="w-full bg-flyfast-yellow text-flyfast-blue py-4 rounded-xl font-bold text-lg hover:bg-yellow-400 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3 transform active:scale-[0.98]"
+                  className="w-full bg-black text-white py-4 rounded-xl font-medium hover:bg-gray-800 transition-colors shadow-lg"
                 >
-                  <FaShoppingCart size={20} /> 
-                  Adicionar ao Carrinho
+                  {t('addToCart')}
                 </button>
-                <p className="text-center text-xs text-gray-400 mt-3 flex items-center justify-center gap-1">
-                  <FaInfoCircle /> Envio seguro e rápido com a FLYFAST.
-                </p>
               </div>
             </div>
           </div>
