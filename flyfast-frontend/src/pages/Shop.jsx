@@ -176,7 +176,7 @@ const ShopContent = () => {
            </select>
         </div>
 
-        <h1 className="text-2xl md:text-3xl font-serif font-medium text-gray-900 order-1 md:order-2">Flyfast Market</h1>
+        <h1 className="text-2xl md:text-3xl font-serif font-medium text-gray-900 order-1 md:order-2">FLYFAST-MARKET</h1>
 
         <div className="flex items-center gap-4 order-3">
            <div className="relative">
