@@ -34,7 +34,7 @@ window.fetch = async (url, options) => {
 const client = Client.buildClient({
   domain: 'flyfast.myshopify.com', // Necessário para validação interna da lib
   storefrontAccessToken: 'dummy-token', // O token real está seguro no backend, aqui pode ser qualquer string
-  apiVersion: '2025-10'
+  apiVersion: '2026-01'
 });
 
 export default client;

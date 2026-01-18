@@ -19,9 +19,13 @@ router.post('/graphql', async (req, res) => {
   }
 
   try {
+    // URL da API (Versão 2026-01)
+    const url = `https://${domain}/api/2026-01/graphql.json`;
+    console.log('🔗 Proxy Shopify conectando a:', url);
+
     // Faz a requisição para a Shopify (Server-to-Server)
     const response = await axios.post(
-      `https://${domain}/api/2025-10/graphql.json`,
+      url,
       { query, variables },
       {
         headers: {
