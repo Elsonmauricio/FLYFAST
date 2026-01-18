@@ -37,7 +37,11 @@ app.use(helmet());
 app.use(cors({
   origin: function (origin, callback) {
     // Permitir pedidos sem origem (como Postman ou mobile apps) e do frontend
-    if (!origin || (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL) || origin.endsWith('.vercel.app') || origin.includes('localhost')) {
+    if (!origin || 
+        (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL) || 
+        origin.endsWith('.vercel.app') || 
+        origin.includes('localhost') ||
+        origin.includes('flyfast-market.com')) { // Adicionado o domínio personalizado
       callback(null, true);
     } else {
       console.log('CORS blocked origin:', origin);
