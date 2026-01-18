@@ -8,7 +8,9 @@ router.post('/graphql', async (req, res) => {
   const { query, variables } = req.body;
 
   // Configurações (Devem estar no .env do Backend)
-  const domain = process.env.SHOPIFY_DOMAIN || 'flyfast.myshopify.com';
+  let domain = process.env.SHOPIFY_DOMAIN || 'flyfast.myshopify.com';
+  // Remove protocolo (https://) e barras no final para evitar erros de URL (ex: https://flyfast.myshopify.com/ -> flyfast.myshopify.com)
+  domain = domain.replace(/^https?:\/\//, '').replace(/\/$/, '');
   const storefrontAccessToken = process.env.SHOPIFY_STOREFRONT_TOKEN;
 
   if (!storefrontAccessToken) {
@@ -19,7 +21,7 @@ router.post('/graphql', async (req, res) => {
   try {
     // Faz a requisição para a Shopify (Server-to-Server)
     const response = await axios.post(
-      `https://${domain}/api/2025-01/graphql.json`,
+      `https://${domain}/api/2025-10/graphql.json`,
       { query, variables },
       {
         headers: {
