@@ -91,13 +91,12 @@ const PersonalShopper = () => {
             </h2>
             <div className="flex flex-col md:flex-row justify-center items-center gap-8">
               <div className="text-center">
-                <div className="text-3xl font-bold text-flyfast-blue">15%</div>
-                <p className="text-gray-600">do valor do produto</p>
+                <div className="text-3xl font-bold text-flyfast-blue">Compras Online: 6€</div>
+                <p className="text-gray-600">por loja</p>
               </div>
-              <div className="text-2xl">+</div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-flyfast-blue">5.000 AOA</div>
-                <p className="text-gray-600">taxa mínima</p>
+                <div className="text-3xl font-bold text-flyfast-blue">Compras Físicas: 12€</div>
+                <p className="text-gray-600">Por loja</p>
               </div>
               <div className="text-2xl">+</div>
               <div className="text-center">
@@ -106,7 +105,7 @@ const PersonalShopper = () => {
               </div>
             </div>
             <p className="text-gray-600 mt-6">
-              * A taxa de serviço só é cobrada após confirmação da compra
+               A taxa de serviço só é cobrada após confirmação da compra
             </p>
           </div>
         </div>
