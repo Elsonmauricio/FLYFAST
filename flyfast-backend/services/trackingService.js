@@ -23,7 +23,8 @@ class TrackingService {
         status,
         location: updateData.location || shipment.currentLocation,
         description: updateData.description || `Status atualizado para: ${status}`,
-        isMilestone: updateData.isMilestone || false
+        isMilestone: updateData.isMilestone || false,
+        date: new Date().toISOString() // Garante que a data/hora exata do evento é registada em formato ISO
       };
 
       shipment.trackingHistory.push(trackingEvent);
@@ -214,7 +215,7 @@ class TrackingService {
         status: shipment.status,
         currentLocation: shipment.currentLocation,
         estimatedDelivery: shipment.estimatedDelivery,
-        history: shipment.trackingHistory.sort((a, b) => b.timestamp - a.timestamp),
+        history: shipment.trackingHistory.sort((a, b) => new Date(b.date) - new Date(a.date)),
         user: shipment.userId
       };
       
