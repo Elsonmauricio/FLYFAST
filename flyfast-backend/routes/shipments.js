@@ -178,8 +178,8 @@ router.post('/', authenticate, async (req, res) => {
 
       // Endereços dos Armazéns (Drop-off) - Onde o cliente deve entregar
       const warehouses = {
-        'Luanda': 'Rua da Missão, nº 10, Ingombota, Luanda',
-        'Lisboa': 'Av. do Brasil, nº 34, 1700-061 Lisboa'
+        'Luanda': 'Rua direita do colegio São Vicente de Paulo, Luanda Sul, Viana, Angola',
+        'Lisboa': 'Centro Comercial Quinta Nova, Loja 2. Rua de Alves Redol 1, 2675-285 Odivelas, Lisboa, Portugal'
       };
       const dropOffAddress = warehouses[data.from] || 'Endereço a confirmar com o suporte';
 

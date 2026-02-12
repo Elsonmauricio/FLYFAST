@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTracking } from '../hooks/useTracking';
 import { useParams } from 'react-router-dom';
-import { FaSearch, FaSpinner, FaExclamationCircle, FaBell, FaEnvelope, FaPlane } from 'react-icons/fa';
+import { FaSearch, FaSpinner, FaExclamationCircle, FaBell, FaEnvelope } from 'react-icons/fa';
 import { MapContainer, TileLayer, Marker, Polyline, useMap, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -105,19 +105,7 @@ const Tracking = () => {
     } catch (error) {
       alert('Erro de conexão.');
     } finally {
-      setIsSubscribing(false);
     }
-  };
-
-  const getProgress = (status) => {
-    const statusMap = {
-      'Pendente': 5,
-      'Em Processamento': 20,
-      'Em Trânsito': 60,
-      'Chegou ao Destino': 90,
-      'Entregue': 100
-    };
-    return statusMap[status] || 5;
   };
 
   // Coordenadas das principais cidades (Adicione mais conforme necessário)
@@ -322,7 +310,11 @@ const Tracking = () => {
               <p className="text-gray-600">
                 <strong>Rota:</strong> {trackingInfo.from || 'Luanda'} ➝ {trackingInfo.to || 'Lisboa'}
               </p>
-              <p className="text-gray-500 text-sm mt-2">Última atualização: {new Date(displayLastUpdate).toLocaleString('pt-PT')}</p>
+              <p className="text-gray-500 text-sm mt-2">
+                Última atualização: {displayLastUpdate && !isNaN(new Date(displayLastUpdate).getTime()) 
+                  ? new Date(displayLastUpdate).toLocaleString('pt-PT') 
+                  : 'A aguardar atualização'}
+              </p>
             </div>
 
             <div>
@@ -336,17 +328,17 @@ const Tracking = () => {
                   })
                   .map((item, index) => (
                   <li key={index} className="step step-primary">
-                    <div className="flex flex-col items-start text-left ml-2">
-                      <span className="font-semibold">{item.location || 'Localização não registada'}</span>
-                      <span className="text-sm text-gray-500">
+                    <div className="flex flex-col items-start text-left ml-4 mb-2">
+                      <span className="font-bold text-gray-800">{item.status || 'Atualização'}</span>
+                      <span className="text-sm font-medium text-gray-600">{item.location || 'Localização não registada'}</span>
+                      <span className="text-xs text-gray-400 mt-0.5">
                         {item.date && !isNaN(new Date(item.date).getTime()) ? new Date(item.date).toLocaleString('pt-PT', {
-                          day: '2-digit', month: '2-digit', year: 'numeric',
+                          day: '2-digit', month: 'long', year: 'numeric',
                           hour: '2-digit', minute: '2-digit'
                         }) : <span className="text-orange-500 text-xs">Data pendente</span>}
                       </span>
-                      <span className="text-sm font-bold text-flyfast-blue">{item.status || 'Atualização'}</span>
                       {item.description && (
-                        <span className="text-xs text-gray-400 mt-1 italic">{item.description}</span>
+                        <p className="text-xs text-gray-500 mt-1 bg-gray-50 p-2 rounded border border-gray-100 max-w-xs">{item.description}</p>
                       )}
                     </div>
                   </li>
