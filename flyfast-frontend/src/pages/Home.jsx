@@ -61,13 +61,13 @@ const Home = () => {
         <div className="relative z-20 container mx-auto px-4 text-center text-white">
           <div className="max-w-5xl mx-auto">
             {/* Informações de contato no topo - inspirado no site de exemplo */}
-            <div className="flex justify-end items-center space-x-6 mb-8 text-sm uppercase tracking-wider text-white/80">
-              <div className="flex items-center space-x-2">
+            <div className="flex flex-col md:flex-row justify-center md:justify-end items-center gap-2 md:gap-6 mb-4 md:mb-8 text-[10px] sm:text-xs md:text-sm uppercase tracking-wider text-white/80">
+              <div className="flex items-center gap-2">
                 <span className="text-flyfast-yellow font-bold"> FLYFAST</span>
-                <span>|</span>
+                <span className="hidden md:inline">|</span>
                 <span>Luanda - Lisboa</span>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <span className="text-flyfast-yellow">📞</span>
                 <a href="tel:+244123456789" className="hover:text-flyfast-yellow transition-colors">
                   244 943 427 296
@@ -76,36 +76,36 @@ const Home = () => {
             </div>
 
             {/* Título principal */}
-            <h1 className="text-5xl md:text-7xl font-black mb-6 leading-tight">
+            <h1 className="text-3xl sm:text-5xl md:text-7xl font-black mb-4 md:mb-6 leading-tight">
               Conectamos <span className="text-flyfast-yellow">Angola</span> e{' '}
               <span className="text-flyfast-yellow">Portugal</span>
             </h1>
             
-            <p className="text-xl md:text-2xl mb-8 text-white/90 max-w-3xl mx-auto">
+            <p className="text-base sm:text-lg md:text-2xl mb-6 md:mb-8 text-white/90 max-w-3xl mx-auto">
               Transporte rápido, seguro e confiável de cargas e encomendas entre Luanda e Lisboa
             </p>
             
-            <p className="text-2xl md:text-3xl font-bold text-flyfast-yellow mb-12 animate-pulse">
+            <p className="text-lg sm:text-xl md:text-3xl font-bold text-flyfast-yellow mb-6 md:mb-12 animate-pulse">
                VOO DIRETO TODOS OS DIAS 
             </p>
 
             {/* Botões de ação - com estilo mais moderno como no exemplo */}
-            <div className="flex flex-wrap justify-center gap-4">
+            <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
               <Link 
                 to="/tracking" 
-                className="group bg-flyfast-yellow text-flyfast-blue px-8 py-4 rounded-full text-lg font-bold hover:bg-yellow-400 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center gap-2"
+                className="group bg-flyfast-yellow text-flyfast-blue px-6 py-3 md:px-8 md:py-4 rounded-full text-base md:text-lg font-bold hover:bg-yellow-400 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 w-full sm:w-auto"
               >
                 <span>🔍</span> Rastrear Envio
               </Link>
               <Link 
                 to="/shop" 
-                className="group bg-transparent border-2 border-white text-white px-8 py-4 rounded-full text-lg font-bold hover:bg-white hover:text-flyfast-blue transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center gap-2"
+                className="group bg-transparent border-2 border-white text-white px-6 py-3 md:px-8 md:py-4 rounded-full text-base md:text-lg font-bold hover:bg-white hover:text-flyfast-blue transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 w-full sm:w-auto"
               >
                 <span>🛍️</span> Visitar Loja
               </Link>
               <Link 
                 to="/routes" 
-                className="group bg-flyfast-blue text-white px-8 py-4 rounded-full text-lg font-bold hover:bg-blue-900 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center gap-2"
+                className="group bg-flyfast-blue text-white px-6 py-3 md:px-8 md:py-4 rounded-full text-base md:text-lg font-bold hover:bg-blue-900 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 w-full sm:w-auto"
               >
                 <span>📦</span> Enviar Agora
                 <FaArrowRight className="group-hover:translate-x-2 transition-transform" />
@@ -113,22 +113,22 @@ const Home = () => {
             </div>
 
             {/* Estatísticas rápidas - como no site de exemplo */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-16">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-8 mt-8 md:mt-16">
               <div>
-                <div className="text-3xl font-black text-flyfast-yellow">3000K+</div>
-                <p className="text-sm uppercase tracking-wider">Transportes</p>
+                <div className="text-2xl md:text-3xl font-black text-flyfast-yellow">3000K+</div>
+                <p className="text-xs md:text-sm uppercase tracking-wider">Transportes</p>
               </div>
               <div>
-                <div className="text-3xl font-black text-flyfast-yellow">1500+</div>
-                <p className="text-sm uppercase tracking-wider">Frota</p>
+                <div className="text-2xl md:text-3xl font-black text-flyfast-yellow">1500+</div>
+                <p className="text-xs md:text-sm uppercase tracking-wider">Frota</p>
               </div>
               <div>
-                <div className="text-3xl font-black text-flyfast-yellow">8000+</div>
-                <p className="text-sm uppercase tracking-wider">Clientes</p>
+                <div className="text-2xl md:text-3xl font-black text-flyfast-yellow">8000+</div>
+                <p className="text-xs md:text-sm uppercase tracking-wider">Clientes</p>
               </div>
               <div>
-                <div className="text-3xl font-black text-flyfast-yellow">99%</div>
-                <p className="text-sm uppercase tracking-wider">Satisfação</p>
+                <div className="text-2xl md:text-3xl font-black text-flyfast-yellow">99%</div>
+                <p className="text-xs md:text-sm uppercase tracking-wider">Satisfação</p>
               </div>
             </div>
           </div>
@@ -136,11 +136,11 @@ const Home = () => {
       </section>
 
       {/* Services Section - mantendo seu conteúdo, mas com estilo mais clean */}
-      <section className="py-24 bg-white">
+      <section className="py-16 md:py-24 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <span className="text-flyfast-blue font-bold text-sm uppercase tracking-widest">SERVIÇOS</span>
-            <h2 className="text-4xl md:text-5xl font-black text-flyfast-blue mt-2 mb-6">
+            <h2 className="text-3xl md:text-5xl font-black text-flyfast-blue mt-2 mb-6">
               Worldwide Shipping
             </h2>
             <div className="w-24 h-1 bg-flyfast-yellow mx-auto mb-6"></div>
@@ -160,12 +160,12 @@ const Home = () => {
       </section>
 
       {/* Seção "Trusted Experience" - inspirada no site de exemplo */}
-      <section className="py-24 bg-gray-50">
+      <section className="py-16 md:py-24 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-2 gap-16 items-center">
             <div>
-              <span className="text-flyfast-blue font-bold text-sm uppercase tracking-widest">EXPERIÊNCIA</span>
-              <h2 className="text-4xl md:text-5xl font-black text-flyfast-blue mt-2 mb-6">
+              <span className="text-flyfast-blue font-bold text-sm uppercase tracking-widest block mb-2">EXPERIÊNCIA</span>
+              <h2 className="text-3xl md:text-5xl font-black text-flyfast-blue mb-6">
                 Confiança que <span className="text-flyfast-yellow">transporta</span>
               </h2>
               <p className="text-gray-600 text-lg mb-8">
@@ -190,13 +190,13 @@ const Home = () => {
               </div>
             </div>
             
-            <div className="relative">
+            <div className="relative mt-8 md:mt-0 ml-4 md:ml-0">
               <img 
                 src={experienceImage} 
                 alt="Avião de carga da FLYFAST a ser carregado"
-                className="rounded-2xl shadow-2xl"
+                className="rounded-2xl shadow-2xl w-full"
               />
-              <div className="absolute -bottom-6 -left-6 bg-flyfast-yellow p-6 rounded-2xl shadow-xl">
+              <div className="absolute -bottom-4 -left-4 md:-bottom-6 md:-left-6 bg-flyfast-yellow p-4 md:p-6 rounded-2xl shadow-xl">
                 <p className="text-flyfast-blue font-bold text-2xl">+2 anos</p>
                 <p className="text-flyfast-blue">de experiência</p>
               </div>
@@ -206,12 +206,12 @@ const Home = () => {
       </section>
 
       {/* Upcoming Routes - mantendo seu conteúdo */}
-      <section className="py-24 bg-gradient-to-br from-flyfast-light-yellow to-yellow-50">
+      <section className="py-16 md:py-24 bg-gradient-to-br from-flyfast-light-yellow to-yellow-50">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center mb-16">
-            <div>
+            <div className="text-center md:text-left">
               <span className="text-flyfast-blue font-bold text-sm uppercase tracking-widest">VOOS</span>
-              <h2 className="text-4xl md:text-5xl font-black text-flyfast-blue mt-2">
+              <h2 className="text-3xl md:text-5xl font-black text-flyfast-blue mt-2">
                 Próximas Rotas
               </h2>
             </div>
@@ -258,10 +258,10 @@ const Home = () => {
       </section>
 
       {/* CTA Section - Get a quote */}
-      <section className="py-24 bg-gradient-to-r from-flyfast-yellow to-yellow-400">
+      <section className="py-16 md:py-24 bg-gradient-to-r from-flyfast-yellow to-yellow-400">
         <div className="container mx-auto px-4 text-center">
           <div className="max-w-3xl mx-auto">
-            <h2 className="text-4xl md:text-5xl font-black text-flyfast-blue mb-6">
+            <h2 className="text-3xl md:text-5xl font-black text-flyfast-blue mb-6">
               Solicite um orçamento
             </h2>
             <p className="text-xl text-flyfast-blue/80 mb-8">
