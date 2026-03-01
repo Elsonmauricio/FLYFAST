@@ -154,7 +154,7 @@ const Routes = () => {
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-bold mb-6">
-              ✈️ Rotas e Envios
+               Rotas e Envios
             </h1>
             <p className="text-xl max-w-3xl mx-auto">
               Encontre as próximas rotas disponíveis entre Luanda e Lisboa e reserve seu envio
@@ -277,7 +277,7 @@ const Routes = () => {
           {/* Empty State */}
           {!isLoading && !error && filteredRoutes.length === 0 && (
             <div className="text-center py-16">
-              <div className="text-6xl mb-6">✈️</div>
+              {/* <div className="text-6xl mb-6">✈️</div> */}
               <h3 className="text-2xl font-bold text-gray-700 mb-4">
                 Nenhuma rota disponível
               </h3>
