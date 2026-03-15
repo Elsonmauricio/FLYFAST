@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import API_URL from '../config/api';
 import { db } from '../lib/firebase';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 
@@ -18,7 +19,7 @@ export const useNotifications = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/notifications', {
+      const response = await fetch(`${API_URL}/api/notifications`, {
         headers: {
           'Authorization': `Bearer ${authState.token}`,
           'Content-Type': 'application/json',

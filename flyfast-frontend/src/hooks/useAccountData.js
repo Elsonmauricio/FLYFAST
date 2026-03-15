@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import API_URL from '../config/api';
 // import { shopifyClient } from '../lib/shopify';
 
 // Hook para buscar o histórico de envios do utilizador
@@ -22,7 +23,7 @@ export const useShipments = () => {
 
       try {
         // A URL da API viria de uma variável de ambiente, ex: process.env.REACT_APP_API_URL
-        const response = await fetch('/api/account/shipments', {
+        const response = await fetch(`${API_URL}/api/account/shipments`, {
           headers: {
             'Authorization': `Bearer ${authState.token}`,
           },
