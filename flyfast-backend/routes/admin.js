@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
-const { db, auth } = require('../config/firebase');
+const { db, auth, FieldValue } = require('../config/firebase');
 // const { adminAuth } = require('../middleware/auth');
 const { uploadSingle } = require('../middleware/upload');
 const { isAuthenticated, hasRole } = require('../middleware/authMiddleware');
+const emailService = require('../services/emailService');
 
 // Dashboard stats
 router.get('/dashboard/stats', isAuthenticated, hasRole(['admin']), adminController.getDashboardStats);
@@ -18,7 +19,118 @@ router.post('/users/:id/impersonate', isAuthenticated, hasRole(['admin']), admin
 
 // Envios
 router.get('/shipments', isAuthenticated, hasRole(['admin']), adminController.getShipments);
-router.post('/shipments', isAuthenticated, hasRole(['admin']), adminController.createShipment);
+
+// Rota auxiliar para verificar disponibilidade em tempo real no formulário
+router.get('/check-availability', isAuthenticated, hasRole(['admin']), async (req, res) => {
+    try {
+        const { from, to, date } = req.query;
+
+        if (!from || !to || !date) {
+            return res.status(400).json({ error: 'Parâmetros insuficientes' });
+        }
+
+        const snapshot = await db.collection('schedules')
+            .where('from', '==', from)
+            .where('to', '==', to)
+            .where('date', '==', date)
+            .limit(1)
+            .get();
+
+        if (snapshot.empty) {
+            return res.json({ exists: false, available: 0, message: 'Rota não encontrada' });
+        }
+
+        const data = snapshot.docs[0].data();
+        res.json({ exists: true, available: data.available, capacity: data.capacity, scheduleId: snapshot.docs[0].id });
+    } catch (error) {
+        console.error('Erro ao verificar disponibilidade:', error);
+        res.status(500).json({ error: 'Erro ao verificar disponibilidade' });
+    }
+});
+
+// Substituído para garantir que a capacidade da rota é atualizada
+router.post('/shipments', isAuthenticated, hasRole(['admin']), async (req, res) => {
+    try {
+        const data = req.body;
+
+        if (!data.userId || !data.from || !data.to || !data.date || !data.weight) {
+            return res.status(400).json({ error: 'ID do cliente, origem, destino, data e peso são obrigatórios.' });
+        }
+
+        const scheduleQuery = await db.collection('schedules')
+            .where('from', '==', data.from.trim())
+            .where('to', '==', data.to.trim())
+            .where('date', '==', data.date)
+            .limit(1)
+            .get();
+        
+        if (scheduleQuery.empty) {
+            return res.status(404).json({ error: `Nenhuma rota encontrada para ${data.from} -> ${data.to} na data ${data.date}. Crie a rota primeiro.` });
+        }
+        const scheduleId = scheduleQuery.docs[0].id;
+
+        const clientUserDoc = await db.collection('users').doc(data.userId).get();
+        if (!clientUserDoc.exists) {
+            return res.status(404).json({ error: 'Cliente não encontrado.' });
+        }
+
+        const newShipmentData = {
+            ...data,
+            scheduleId: scheduleId,
+            userEmail: clientUserDoc.data().email,
+            status: data.status || 'Pendente',
+            createdAt: new Date().toISOString(),
+            trackingHistory: [{ status: data.status || 'Pendente', location: data.from, date: new Date().toISOString() }]
+        };
+
+        const shipmentId = await db.runTransaction(async (t) => {
+            const scheduleRef = db.collection('schedules').doc(scheduleId);
+            const scheduleDoc = await t.get(scheduleRef);
+
+            if (!scheduleDoc.exists) throw new Error("A rota selecionada já não existe.");
+
+            const scheduleData = scheduleDoc.data();
+            const currentAvailable = parseFloat(scheduleData.available);
+            const weightToDeduct = parseFloat(data.weight);
+
+            if (currentAvailable < weightToDeduct) throw new Error(`Capacidade insuficiente na rota. Disponível: ${currentAvailable}kg`);
+            
+            t.update(scheduleRef, { available: currentAvailable - weightToDeduct });
+            const shipmentRef = db.collection('shipments').doc();
+            t.set(shipmentRef, { ...newShipmentData, id: shipmentRef.id });
+            return shipmentRef.id;
+        });
+
+        // Enviar notificação por email ao cliente
+        try {
+            const clientData = clientUserDoc.data();
+            if (clientData.email && emailService && typeof emailService.sendEmail === 'function') {
+                const emailHtml = `
+                    <h3>Novo Envio Criado</h3>
+                    <p>Olá ${clientData.name || 'Cliente'},</p>
+                    <p>Um novo envio foi criado para si pela nossa equipa administrativa.</p>
+                    <div style="background:#f9f9f9; padding:15px; border-radius:5px; margin: 15px 0;">
+                        <p><strong>Código de Rastreio:</strong> ${shipmentId}</p>
+                        <p><strong>Rota:</strong> ${data.from} -> ${data.to}</p>
+                        <p><strong>Data:</strong> ${data.date}</p>
+                        <p><strong>Peso:</strong> ${data.weight} kg</p>
+                        <p><strong>Estado:</strong> ${data.status || 'Pendente'}</p>
+                    </div>
+                    <p>Pode acompanhar o estado do seu envio na sua área de cliente.</p>
+                `;
+                await emailService.sendEmail(clientData.email, `Novo Envio Criado #${shipmentId}`, emailHtml);
+            }
+        } catch (emailError) {
+            console.error('Erro ao enviar email de notificação (Admin):', emailError);
+        }
+
+        res.status(201).json({ message: 'Envio criado e registado na rota com sucesso!', id: shipmentId });
+    } catch (error) {
+        console.error('Erro ao criar envio pelo admin:', error);
+        res.status(500).json({ error: error.message || 'Erro ao processar envio' });
+    }
+});
+
 router.get('/shipments/:id', isAuthenticated, hasRole(['admin']), adminController.getShipmentDetails);
 router.put('/shipments/:id', isAuthenticated, hasRole(['admin']), adminController.updateShipment);
 router.delete('/shipments/:id', isAuthenticated, hasRole(['admin']), adminController.deleteShipment);
