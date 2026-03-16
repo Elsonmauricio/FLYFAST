@@ -36,18 +36,15 @@ app.set('trust proxy', 1);
 app.use(helmet());
 app.use(cors({
   origin: function (origin, callback) {
-    // Permitir pedidos sem origem (como Postman ou mobile apps) e do frontend
-    if (!origin || 
-        (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL) || 
-        origin.endsWith('.vercel.app') || 
-        origin.includes('localhost') ||
-        origin.includes('flyfast-market.com') ||
-        // Aceitar o teu domínio específico do frontend Vercel e variações
-        origin.includes('flyfast') 
-       ) { 
+    // Lista de origens permitidas. Adicione o seu domínio personalizado se tiver um.
+    const allowedOrigins = [process.env.FRONTEND_URL, 'https://flyfast-market.com'];
+
+    // Permitir pedidos sem 'origin' (ex: Postman), de origens na lista,
+    // de qualquer subdomínio vercel.app (para previews) e de localhost (para desenvolvimento).
+    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app') || origin.includes('localhost')) {
       callback(null, true);
     } else {
-      console.error(`[CORS BLOCK] Origem bloqueada: ${origin}. Adicione ao server.js se for confiável.`);
+      console.error(`[CORS BLOCK] A origem '${origin}' foi bloqueada pela política de CORS.`);
       callback(new Error('Not allowed by CORS'));
     }
   },
