@@ -20,7 +20,7 @@
     },
     {
       "source": "/((?!api/|.*\\..*).*)",
-      "destination": "/flyfast-frontend/index.js"
+      "destination": "/index.html"
     }
   ]
 }

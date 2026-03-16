@@ -121,7 +121,7 @@ const AdminContent = () => {
     if (!authState.token) return;
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/admin/dashboard/stats`, {
+      const response = await fetch(`/api/admin/dashboard/stats`, {
         headers: { 'Authorization': `Bearer ${authState.token}` }
       });
       if (response.ok) {
@@ -140,7 +140,7 @@ const AdminContent = () => {
     setIsLoading(true);
     try {
       const cursor = userCursors[pageIndex];
-      let url = `${API_URL}/api/admin/users?limit=1000`;
+      let url = `/api/admin/users?limit=1000`;
       if (cursor) {
         url += `&startAfter=${cursor}`;
       }
@@ -175,7 +175,7 @@ const AdminContent = () => {
     if (!authState.token) return;
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/admin/shipments`, {
+      const response = await fetch(`/api/admin/shipments`, {
         headers: { 'Authorization': `Bearer ${authState.token}` }
       });
       if (response.ok) {
@@ -193,7 +193,7 @@ const AdminContent = () => {
     if (!authState.token) return;
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/personal-shopper/admin/requests`, {
+      const response = await fetch(`/api/personal-shopper/admin/requests`, {
         headers: { 'Authorization': `Bearer ${authState.token}` }
       });
       if (response.ok) {
@@ -213,7 +213,7 @@ const AdminContent = () => {
     try {
       const cursor = routesCursors[pageIndex];
       // Adiciona timestamp para evitar cache do navegador e garante sintaxe correta
-      let url = `${API_URL}/api/schedules?_t=${new Date().getTime()}`;
+      let url = `/api/schedules?_t=${new Date().getTime()}`;
       if (cursor) {
         url += `&startAfter=${cursor}`;
       }
@@ -248,7 +248,7 @@ const AdminContent = () => {
     setIsLoading(true);
     try {
       // Buscar preços atuais
-      const response = await fetch(`${API_URL}/api/admin/pricing`, {
+      const response = await fetch(`/api/admin/pricing`, {
         headers: { 'Authorization': `Bearer ${authState.token}` }
       });
       if (response.ok) {
@@ -257,7 +257,7 @@ const AdminContent = () => {
       }
 
       // Buscar logs de auditoria
-      const logsResponse = await fetch(`${API_URL}/api/admin/pricing/logs`, {
+      const logsResponse = await fetch(`/api/admin/pricing/logs`, {
         headers: { 'Authorization': `Bearer ${authState.token}` }
       });
       if (logsResponse.ok) {
@@ -311,7 +311,7 @@ const AdminContent = () => {
     if (!authState.token) return;
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/admin/contact-requests`, {
+      const response = await fetch(`/api/admin/contact-requests`, {
         headers: { 'Authorization': `Bearer ${authState.token}` }
       });
       if (response.ok) {
@@ -352,7 +352,7 @@ const AdminContent = () => {
   const handleDeleteUser = async (userId) => {
     if(!window.confirm('Tem a certeza que deseja apagar este utilizador? Esta ação é irreversível.')) return;
     try {
-      const response = await fetch(`${API_URL}/api/admin/users/${userId}`, {
+      const response = await fetch(`/api/admin/users/${userId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${authState.token}` }
       });
@@ -372,7 +372,7 @@ const AdminContent = () => {
     const newRole = prompt("Introduza o novo role (admin, customer, user):", currentRole);
     if (newRole && newRole !== currentRole) {
       try {
-        const response = await fetch(`${API_URL}/api/users/${userId}`, {
+        const response = await fetch(`/api/users/${userId}`, {
           method: 'PUT',
           headers: { 
             'Authorization': `Bearer ${authState.token}`,
@@ -398,7 +398,7 @@ const AdminContent = () => {
     if(!window.confirm('Deseja reenviar o email de rastreio para o cliente?')) return;
     
     try {
-      const response = await fetch(`${API_URL}/api/shipments/${shipmentId}/resend-email`, {
+      const response = await fetch(`/api/shipments/${shipmentId}/resend-email`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${authState.token}` }
       });
@@ -418,7 +418,7 @@ const AdminContent = () => {
     if(!window.confirm('Tem a certeza que deseja cancelar este envio? A capacidade será devolvida à rota.')) return;
     
     try {
-      const response = await fetch(`${API_URL}/api/shipments/${shipmentId}/cancel`, {
+      const response = await fetch(`/api/shipments/${shipmentId}/cancel`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${authState.token}` }
       });
@@ -469,7 +469,7 @@ const AdminContent = () => {
     }
 
     try {
-      const response = await fetch(`${API_URL}/api/admin/shipments`, {
+      const response = await fetch(`/api/admin/shipments`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authState.token}`,
@@ -529,7 +529,7 @@ const AdminContent = () => {
 
     try {
       // Usar o novo endpoint que suporta notificações
-      const response = await fetch(`${API_URL}/api/admin/shipments/${editingShipment.id}/update-status`, {
+      const response = await fetch(`/api/admin/shipments/${editingShipment.id}/update-status`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authState.token}`,
@@ -574,7 +574,7 @@ const AdminContent = () => {
     if (!selectedRequest) return;
 
     try {
-        const response = await fetch(`${API_URL}/api/personal-shopper/requests/${selectedRequest.id}/status`, {
+        const response = await fetch(`/api/personal-shopper/requests/${selectedRequest.id}/status`, {
             method: 'PUT',
             headers: { 'Authorization': `Bearer ${authState.token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: newStatus })
@@ -590,7 +590,7 @@ const AdminContent = () => {
   const handleCreateRoute = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(`${API_URL}/api/schedules`, {
+      const response = await fetch(`/api/schedules`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authState.token}`,
@@ -623,7 +623,7 @@ const AdminContent = () => {
     if (!editingRoute) return;
 
     try {
-      const response = await fetch(`${API_URL}/api/schedules/${editingRoute.id}`, {
+      const response = await fetch(`/api/schedules/${editingRoute.id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${authState.token}`,
@@ -649,7 +649,7 @@ const AdminContent = () => {
   const handleDeleteRoute = async (id) => {
     if(!window.confirm('Tem a certeza que deseja apagar esta rota?')) return;
     try {
-      const response = await fetch(`${API_URL}/api/schedules/${id}`, {
+      const response = await fetch(`/api/schedules/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${authState.token}` }
       });
@@ -671,7 +671,7 @@ const AdminContent = () => {
     setIsLoadingRouteShipments(true);
 
     try {
-      const response = await fetch(`${API_URL}/api/admin/schedules/${route.id}/shipments`, {
+      const response = await fetch(`/api/admin/schedules/${route.id}/shipments`, {
         headers: { 'Authorization': `Bearer ${authState.token}` }
       });
       if (response.ok) {
@@ -694,7 +694,7 @@ const AdminContent = () => {
     const newPoints = prompt("Introduza o novo saldo de pontos:", currentPoints);
     if (newPoints !== null && !isNaN(newPoints)) {
         try {
-            const response = await fetch(`${API_URL}/api/users/${userId}`, {
+            const response = await fetch(`/api/users/${userId}`, {
                 method: 'PUT',
                 headers: { 
                     'Authorization': `Bearer ${authState.token}`,
@@ -721,7 +721,7 @@ const AdminContent = () => {
   const handleUpdatePricing = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(`${API_URL}/api/admin/pricing`, {
+      const response = await fetch(`/api/admin/pricing`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${authState.token}`,
@@ -744,7 +744,7 @@ const AdminContent = () => {
   const handleDeleteMessage = async (id) => {
     if(!window.confirm('Tem a certeza que deseja apagar esta mensagem?')) return;
     try {
-      const response = await fetch(`${API_URL}/api/admin/contact-requests/${id}`, {
+      const response = await fetch(`/api/admin/contact-requests/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${authState.token}` }
       });
@@ -764,7 +764,7 @@ const AdminContent = () => {
     
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/admin/system/fix-capacities`, {
+      const response = await fetch(`/api/admin/system/fix-capacities`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${authState.token}` }
       });
@@ -789,7 +789,7 @@ const AdminContent = () => {
     
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/admin/system/fix-users`, {
+      const response = await fetch(`/api/admin/system/fix-users`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${authState.token}` }
       });
