@@ -13,25 +13,14 @@
       }
     }
   ],
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "/flyfast-backend/index.js"
+      "source": "/api/(.*)",
+      "destination": "/flyfast-backend/index.js"
     },
     {
-      "src": "/static/(.*)",
-      "dest": "/flyfast-frontend/static/$1"
-    },
-    {
-      "src": "/(.*\\..*)",
-      "dest": "/flyfast-frontend/$1"
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/flyfast-frontend/index.html"
+      "source": "/(.*)",
+      "destination": "/flyfast-frontend/build/index.html"
     }
   ]
 }
