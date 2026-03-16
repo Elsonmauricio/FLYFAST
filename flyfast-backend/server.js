@@ -42,8 +42,8 @@ app.use(cors({
         origin.endsWith('.vercel.app') || 
         origin.includes('localhost') ||
         origin.includes('flyfast-market.com') ||
-        // Adicione aqui o domínio exato do seu admin se for diferente do frontend principal
-        origin.includes('flyfast-admin') 
+        // Aceitar o teu domínio específico do frontend Vercel e variações
+        origin.includes('flyfast') 
        ) { 
       callback(null, true);
     } else {
