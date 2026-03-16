@@ -537,7 +537,7 @@ const ShopContent = () => {
 const Shop = () => {
   // Defina para 'true' para ativar o modo manutenção e evitar erros da API da Shopify.
   // Defina para 'false' quando a loja Shopify estiver ativa.
-  const isMaintenanceMode = true;
+  const isMaintenanceMode = false;
 
   if (isMaintenanceMode) {
     return (
