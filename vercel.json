@@ -17,6 +17,10 @@
     {
       "source": "/api/(.*)",
       "destination": "/flyfast-backend/index.js"
+    },
+    {
+      "source": "/((?!api/|.*\\..*).*)",
+      "destination": "/index.html"
     }
   ]
 }

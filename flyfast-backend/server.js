@@ -41,7 +41,9 @@ app.use(cors({
 
     // Permitir pedidos sem 'origin' (ex: Postman), de origens na lista,
     // de qualquer subdomínio vercel.app (para previews) e de localhost (para desenvolvimento).
-    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app') || origin.includes('localhost')) {
+    if (!origin || allowedOrigins.includes(origin) ||
+     origin.endsWith('.vercel.app') ||
+      origin.includes('localhost')) {
       callback(null, true);
     } else {
       console.error(`[CORS BLOCK] A origem '${origin}' foi bloqueada pela política de CORS.`);
