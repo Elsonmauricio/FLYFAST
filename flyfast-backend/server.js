@@ -41,10 +41,13 @@ app.use(cors({
         (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL) || 
         origin.endsWith('.vercel.app') || 
         origin.includes('localhost') ||
-        origin.includes('flyfast-market.com')) { // Adicionado o domínio personalizado
+        origin.includes('flyfast-market.com') ||
+        // Adicione aqui o domínio exato do seu admin se for diferente do frontend principal
+        origin.includes('flyfast-admin') 
+       ) { 
       callback(null, true);
     } else {
-      console.log('CORS blocked origin:', origin);
+      console.error(`[CORS BLOCK] Origem bloqueada: ${origin}. Adicione ao server.js se for confiável.`);
       callback(new Error('Not allowed by CORS'));
     }
   },

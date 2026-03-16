@@ -6,15 +6,19 @@ class AdminController {
   // Dashboard
   async getDashboardStats(req, res) {
     try {
-      // Nota: Em produção com muitos dados, usar count() ou contadores distribuídos é melhor
-      const usersSnapshot = await db.collection('users').get();
-      const shipmentsSnapshot = await db.collection('shipments').get();
-      const ordersSnapshot = await db.collection('orders').get();
+      // Otimização: Usar count() aggregation para não baixar todos os documentos
+      // Isso previne Timeouts e estouro de memória em produção
+      const usersCount = await db.collection('users').count().get();
+      const shipmentsCount = await db.collection('shipments').count().get();
+      const ordersCount = await db.collection('orders').count().get();
+      
+      // Para revenue, idealmente deve-se ter um campo incrementado no settings ou fazer uma aggregation query
+      // Por enquanto mantemos estático ou implementamos soma real se necessário
 
       res.json({
-        totalUsers: usersSnapshot.size,
-        activeShipments: shipmentsSnapshot.size,
-        totalOrders: ordersSnapshot.size,
+        totalUsers: usersCount.data().count,
+        activeShipments: shipmentsCount.data().count,
+        totalOrders: ordersCount.data().count,
         monthlyRevenue: 1500000 // Exemplo estático ou calcular soma de orders
       });
     } catch (error) {
