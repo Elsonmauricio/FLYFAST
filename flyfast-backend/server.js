@@ -72,7 +72,7 @@ app.use(cors({
     console.log(`[CORS Check] Pedido recebido da origem: ${origin}`);
 
     // Lista de origens permitidas. Adicione o seu domínio personalizado se tiver um.
-    const allowedOrigins = [process.env.FRONTEND_URL, 'https://flyfast-market.com'];
+    const allowedOrigins = [process.env.FRONTEND_URL, 'https://flyfast-market.com', 'https://www.flyfast-market.com'];
 
     // Permitir pedidos sem 'origin' (ex: Postman), de origens na lista,
     // de qualquer subdomínio vercel.app (para previews) e de localhost (para desenvolvimento).
