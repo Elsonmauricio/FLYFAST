@@ -7,6 +7,32 @@ const compression = require('compression');
 require('express-async-errors'); // Para capturar erros em rotas async
 require('dotenv').config();
 
+// --- Verificação de Variáveis de Ambiente na Inicialização ---
+const essentialEnvs = [
+  'SHOPIFY_STOREFRONT_TOKEN',
+  'SHOPIFY_DOMAIN',
+  'FRONTEND_URL',
+  // Adicione aqui outras variáveis essenciais, como as do Firebase
+  'FIREBASE_PROJECT_ID',
+  'FIREBASE_CLIENT_EMAIL',
+  'FIREBASE_PRIVATE_KEY'
+];
+
+console.log('--- Verificando Variáveis de Ambiente Essenciais ---');
+let hasMissingEnvs = false;
+essentialEnvs.forEach(envVar => {
+  if (!process.env[envVar]) {
+    console.error(`❌ Variável de ambiente em falta: ${envVar}`);
+    hasMissingEnvs = true;
+  } else {
+    console.log(`✅ ${envVar}: Configurada.`);
+  }
+});
+if (hasMissingEnvs) {
+  console.error('🚨 ERRO CRÍTICO: Uma ou mais variáveis de ambiente não estão configuradas. O servidor pode não funcionar corretamente.');
+}
+console.log('----------------------------------------------------');
+
 // Importar configuração Firebase
 const { db, auth } = require('./config/firebase');
 
