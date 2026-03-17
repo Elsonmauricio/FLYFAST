@@ -36,14 +36,15 @@ app.set('trust proxy', 1);
 app.use(helmet());
 app.use(cors({
   origin: function (origin, callback) {
+    // DEBUG: Adicione este log para ver a origem de cada pedido nos logs da Vercel
+    console.log(`[CORS Check] Pedido recebido da origem: ${origin}`);
+
     // Lista de origens permitidas. Adicione o seu domínio personalizado se tiver um.
     const allowedOrigins = [process.env.FRONTEND_URL, 'https://flyfast-market.com'];
 
     // Permitir pedidos sem 'origin' (ex: Postman), de origens na lista,
     // de qualquer subdomínio vercel.app (para previews) e de localhost (para desenvolvimento).
-    if (!origin || allowedOrigins.includes(origin) ||
-     origin.endsWith('.vercel.app') ||
-      origin.includes('localhost')) {
+    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app') || origin.includes('localhost')) {
       callback(null, true);
     } else {
       console.error(`[CORS BLOCK] A origem '${origin}' foi bloqueada pela política de CORS.`);
