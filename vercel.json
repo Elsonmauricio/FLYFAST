@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "flyfast-backend/index.js",
+      "src": "flyfast-backend/server.js",
       "use": "@vercel/node"
     },
     {
@@ -16,7 +16,7 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/flyfast-backend/index.js"
+      "dest": "/flyfast-backend/server.js"
     },
    { "src": "/static/(.*)",
       "dest": "/flyfast-frontend/static/$1"
