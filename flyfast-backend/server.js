@@ -7,20 +7,11 @@ const compression = require('compression');
 require('express-async-errors'); // Para capturar erros em rotas async
 require('dotenv').config();
 
-// --- Verificação de Variáveis de Ambiente na Inicialização ---
-const essentialEnvs = [
-  'SHOPIFY_STOREFRONT_TOKEN',
-  'SHOPIFY_DOMAIN',
-  'FRONTEND_URL',
-  // Adicione aqui outras variáveis essenciais, como as do Firebase
-  'FIREBASE_PROJECT_ID',
-  'FIREBASE_CLIENT_EMAIL',
-  'FIREBASE_PRIVATE_KEY'
-];
-
 console.log('--- Verificando Variáveis de Ambiente Essenciais ---');
 let hasMissingEnvs = false;
-essentialEnvs.forEach(envVar => {
+const standardEnvs = ['SHOPIFY_STOREFRONT_TOKEN', 'SHOPIFY_DOMAIN', 'FRONTEND_URL'];
+
+standardEnvs.forEach(envVar => {
   if (!process.env[envVar]) {
     console.error(`❌ Variável de ambiente em falta: ${envVar}`);
     hasMissingEnvs = true;
@@ -28,6 +19,21 @@ essentialEnvs.forEach(envVar => {
     console.log(`✅ ${envVar}: Configurada.`);
   }
 });
+
+// Verificação inteligente para credenciais Firebase
+const hasBase64 = !!process.env.FIREBASE_SERVICE_ACCOUNT;
+const hasIndividualKeys = !!process.env.FIREBASE_PROJECT_ID && !!process.env.FIREBASE_CLIENT_EMAIL && !!process.env.FIREBASE_PRIVATE_KEY;
+
+if (hasBase64) {
+    console.log('✅ Credenciais Firebase: Configurada via FIREBASE_SERVICE_ACCOUNT (Base64).');
+} else if (hasIndividualKeys) {
+    console.log('✅ Credenciais Firebase: Configurada via variáveis individuais (PROJECT_ID, CLIENT_EMAIL, PRIVATE_KEY).');
+} else {
+    console.error('❌ Credenciais Firebase: Nenhuma configuração encontrada.');
+    console.error('   Defina FIREBASE_SERVICE_ACCOUNT (em Base64) OU o conjunto de FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, e FIREBASE_PRIVATE_KEY.');
+    hasMissingEnvs = true;
+}
+
 if (hasMissingEnvs) {
   console.error('🚨 ERRO CRÍTICO: Uma ou mais variáveis de ambiente não estão configuradas. O servidor pode não funcionar corretamente.');
 }
