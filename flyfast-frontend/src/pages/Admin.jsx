@@ -21,19 +21,35 @@ const AdminContent = () => {
   const [isShipmentFormOpen, setIsShipmentFormOpen] = useState(false);
   const [newShipment, setNewShipment] = useState({
     userId: '',
+    userName: '',
+    userEmail: '',
     from: 'Luanda',
     to: 'Lisboa',
     status: 'Pendente',
     weight: '',
     date: '',
-    items: '' // Adicionado campo para descrição
+    items: ''
   });
+  // Estado para controlar o tipo de cliente no formulário
+  const [isRegisteredClient, setIsRegisteredClient] = useState(true);
+
   const { showAlert } = useAlert();
 
   // Estados para edição de envio
   const [editingShipment, setEditingShipment] = useState(null);
   const [isEditShipmentModalOpen, setIsEditShipmentModalOpen] = useState(false);
   const [shipmentSearch, setShipmentSearch] = useState('');
+
+  // Handler para limpar campos ao trocar o tipo de cliente
+  const handleClientTypeChange = (isRegistered) => {
+    setIsRegisteredClient(isRegistered);
+    setNewShipment(prev => ({
+      ...prev,
+      userId: '',
+      userName: '',
+      userEmail: ''
+    }));
+  };
 
   // Estados de Paginação de Utilizadores
   const [userPage, setUserPage] = useState(0);
@@ -482,7 +498,7 @@ const AdminContent = () => {
         setIsShipmentFormOpen(false);
         fetchShipments();
         fetchRoutes(); // Atualiza as rotas para refletir a nova capacidade imediatamente
-        setNewShipment({ userId: '', from: 'Luanda', to: 'Lisboa', status: 'Pendente', weight: '', date: '', items: '' });
+        setNewShipment({ userId: '', userName: '', userEmail: '', from: 'Luanda', to: 'Lisboa', status: 'Pendente', weight: '', date: '', items: '' });
         showAlert('success', 'Envio criado com sucesso!');
       } else {
         const data = await response.json();
@@ -1148,7 +1164,29 @@ const AdminContent = () => {
              
              {isShipmentFormOpen && (
                <div className="p-6 bg-blue-50 border-b">
-                 <form onSubmit={handleCreateShipment} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+                 <div className="mb-4 flex gap-6 border-b border-blue-200 pb-4">
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input 
+                        type="radio" 
+                        checked={isRegisteredClient} 
+                        onChange={() => handleClientTypeChange(true)}
+                        className="w-4 h-4 text-flyfast-blue focus:ring-flyfast-blue"
+                      />
+                      <span className="font-bold text-gray-700">Utilizador Registado</span>
+                    </label>
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input 
+                        type="radio" 
+                        checked={!isRegisteredClient} 
+                        onChange={() => handleClientTypeChange(false)}
+                        className="w-4 h-4 text-flyfast-blue focus:ring-flyfast-blue"
+                      />
+                      <span className="font-bold text-gray-700">Cliente Sem Registo (Convidado)</span>
+                    </label>
+                 </div>
+
+                 <form onSubmit={handleCreateShipment} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+                    {isRegisteredClient ? (
                     <div>
                       <label className="block text-xs font-bold text-gray-700 uppercase mb-1">ID Cliente</label>
                       <input 
@@ -1157,9 +1195,37 @@ const AdminContent = () => {
                         value={newShipment.userId}
                         onChange={e => setNewShipment({...newShipment, userId: e.target.value})}
                         placeholder="UID do utilizador"
-                        required
+                        required={isRegisteredClient}
                       />
+                      <p className="text-xs text-gray-500 mt-1">Copie o ID da aba "Utilizadores".</p>
                     </div>
+                    ) : (
+                    <>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Nome Cliente</label>
+                        <input 
+                          type="text" 
+                          className="block w-full rounded border-gray-300 shadow-sm p-2 border"
+                          value={newShipment.userName}
+                          onChange={e => setNewShipment({...newShipment, userName: e.target.value})}
+                          placeholder="Nome completo"
+                          required={!isRegisteredClient}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Email Cliente</label>
+                        <input 
+                          type="email" 
+                          className="block w-full rounded border-gray-300 shadow-sm p-2 border"
+                          value={newShipment.userEmail}
+                          onChange={e => setNewShipment({...newShipment, userEmail: e.target.value})}
+                          placeholder="Email para notificações"
+                          required={!isRegisteredClient}
+                        />
+                      </div>
+                    </>
+                    )}
+                    
                     <div>
                       <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Data Viagem</label>
                       <input 
@@ -1168,7 +1234,7 @@ const AdminContent = () => {
                         value={newShipment.date}
                         onChange={e => setNewShipment({...newShipment, date: e.target.value})}
                         required
-                      />
+                      /> 
                       {newShipment.date && newShipment.from && newShipment.to && (() => {
                         const route = routes.find(r => 
                           r.from === newShipment.from && 
@@ -1177,7 +1243,7 @@ const AdminContent = () => {
                         );
                         
                         if (!route) return (
-                          <p className="text-xs text-gray-500 mt-1 italic">
+                          <p className="text-xs text-orange-600 mt-1 italic">
                             ℹ️ Rota não visível na lista atual (verifique a data ao criar).
                           </p>
                         );
@@ -1214,7 +1280,6 @@ const AdminContent = () => {
                         required
                       />
                     </div>
-                    {/* NOVO CAMPO: Descrição / Itens */}
                     <div>
                       <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Descrição / Itens</label>
                       <input 
@@ -1259,9 +1324,11 @@ const AdminContent = () => {
                         <option>Entregue</option>
                       </select>
                     </div>
-                    <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 h-10 font-bold">
-                      Criar
-                    </button>
+                    <div className="self-end">
+                      <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 h-10 font-bold w-full">
+                        Criar
+                      </button>
+                    </div>
                  </form>
                </div>
              )}

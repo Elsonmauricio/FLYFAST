@@ -52,11 +52,21 @@ router.get('/check-availability', isAuthenticated, hasRole(['admin']), async (re
 router.post('/shipments', isAuthenticated, hasRole(['admin']), async (req, res) => {
     try {
         const data = req.body;
+        
+        console.log('[Admin] Tentativa de criar envio:', data);
 
-        if (!data.userId || !data.from || !data.to || !data.date || !data.weight) {
-            return res.status(400).json({ error: 'ID do cliente, origem, destino, data e peso são obrigatórios.' });
+        // Validação Detalhada
+        const missingFields = [];
+        if (!data.userId && !data.userEmail) missingFields.push('Cliente (ID ou Email)');
+        if (!data.from) missingFields.push('Origem');
+        if (!data.to) missingFields.push('Destino');
+        if (!data.date) missingFields.push('Data');
+        if (!data.weight) missingFields.push('Peso');
+
+        if (missingFields.length > 0) {
+            return res.status(400).json({ error: `Campos obrigatórios em falta: ${missingFields.join(', ')}` });
         }
-
+ 
         const scheduleQuery = await db.collection('schedules')
             .where('from', '==', data.from.trim())
             .where('to', '==', data.to.trim())
@@ -68,16 +78,28 @@ router.post('/shipments', isAuthenticated, hasRole(['admin']), async (req, res) 
             return res.status(404).json({ error: `Nenhuma rota encontrada para ${data.from} -> ${data.to} na data ${data.date}. Crie a rota primeiro.` });
         }
         const scheduleId = scheduleQuery.docs[0].id;
-
-        const clientUserDoc = await db.collection('users').doc(data.userId).get();
-        if (!clientUserDoc.exists) {
-            return res.status(404).json({ error: 'Cliente não encontrado.' });
+ 
+        let clientData = {};
+ 
+        // Se um userId for fornecido, busca os dados do utilizador registado.
+        if (data.userId) {
+            const clientUserDoc = await db.collection('users').doc(data.userId).get();
+            if (!clientUserDoc.exists) {
+                return res.status(404).json({ error: 'Cliente registado não encontrado.' });
+            }
+            clientData = clientUserDoc.data();
+        } else {
+            // Se não, usa os dados fornecidos para o cliente não registado.
+            clientData = {
+                email: data.userEmail,
+                name: data.userName || 'Cliente'
+            };
         }
-
+ 
         const newShipmentData = {
             ...data,
             scheduleId: scheduleId,
-            userEmail: clientUserDoc.data().email,
+            userEmail: clientData.email, // Email do cliente (registado ou não)
             status: data.status || 'Pendente',
             createdAt: new Date().toISOString(),
             trackingHistory: [{ status: data.status || 'Pendente', location: data.from, date: new Date().toISOString() }]
@@ -101,24 +123,22 @@ router.post('/shipments', isAuthenticated, hasRole(['admin']), async (req, res) 
             return shipmentRef.id;
         });
 
-        // Enviar notificação por email ao cliente
+        // Enviar notificação por email ao cliente (registado ou não)
         try {
-            const clientData = clientUserDoc.data();
             if (clientData.email && emailService && typeof emailService.sendEmail === 'function') {
                 const emailHtml = `
                     <h3>Novo Envio Criado</h3>
                     <p>Olá ${clientData.name || 'Cliente'},</p>
-                    <p>Um novo envio foi criado para si pela nossa equipa administrativa.</p>
+                    <p>Um novo envio foi criado para si. Pode usar o código abaixo para rastrear a sua encomenda no nosso site.</p>
                     <div style="background:#f9f9f9; padding:15px; border-radius:5px; margin: 15px 0;">
                         <p><strong>Código de Rastreio:</strong> ${shipmentId}</p>
                         <p><strong>Rota:</strong> ${data.from} -> ${data.to}</p>
                         <p><strong>Data:</strong> ${data.date}</p>
                         <p><strong>Peso:</strong> ${data.weight} kg</p>
-                        <p><strong>Estado:</strong> ${data.status || 'Pendente'}</p>
                     </div>
-                    <p>Pode acompanhar o estado do seu envio na sua área de cliente.</p>
+                    <p>Obrigado por escolher a FLYFAST.</p>
                 `;
-                await emailService.sendEmail(clientData.email, `Novo Envio Criado #${shipmentId}`, emailHtml);
+                await emailService.sendEmail(clientData.email, `Seu Código de Rastreio FLYFAST: ${shipmentId}`, emailHtml);
             }
         } catch (emailError) {
             console.error('Erro ao enviar email de notificação (Admin):', emailError);

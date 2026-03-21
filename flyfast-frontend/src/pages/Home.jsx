@@ -45,7 +45,7 @@ const Home = () => {
             muted
             playsInline
             className="w-full h-full object-cover"
-            poster="/flyfast-video-poster.jpg" // Imagem de fallback enquanto o vídeo carrega
+            poster={experienceImage} // Imagem de fallback corrigida
           >
             <source src={heroVideo} type="video/mp4" />
             {/* Fallback para navegadores que não suportam vídeo */}
