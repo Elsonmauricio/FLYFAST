@@ -99,7 +99,7 @@ const Footer = () => {
                 <h4 className="font-bold">🇵🇹 Portugal</h4>
                 <p className="text-gray-300">
                   Centro Comercial Quinta Nova, Loja 2. 
-                  Rua de Alves Redol 1, 2675-285 Odivelas <br />
+                  Rua Prof Dr Egaz Moniz, 2675-344 Odivelas <br />
                   Lisboa, Portugal
                 </p>
               </div>
