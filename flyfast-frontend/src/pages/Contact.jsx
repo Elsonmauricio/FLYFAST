@@ -173,8 +173,8 @@ const Contact = () => {
                   <div>
                     <p className="font-semibold">Endereço</p>
                     <p className="text-gray-600">
-                      Rua direita do colegio São Vicente de Paulo, antigo<br />
-                      Luanda Sul, Viana, Angola
+                      Desvio do Zango, Estrada directa do Viana Parque Sentido Viadulto do Zango <br />
+                     Luanda, Angola
                     </p>
                   </div>
                 </div>
@@ -198,7 +198,7 @@ const Contact = () => {
                   height="100%" 
                   frameBorder="0" 
                   scrolling="no" 
-                  src="https://maps.google.com/maps?q=Rua+direita+do+colegio+S%C3%A3o+Vicente+de+Paulo,+antigo+Luanda+Sul,+Viana,+Angola&t=&z=15&ie=UTF8&iwloc=&output=embed"
+                  src="https://maps.google.com/maps?q=-8.9741422,13.3921292&t=&z=15&ie=UTF8&iwloc=&output=embed"
                 ></iframe>
               </div>
             </div>
@@ -218,8 +218,7 @@ const Contact = () => {
                     <p className="font-semibold">Endereço</p>
                     <p className="text-gray-600">
 
-                      Centro Comercial Quinta Nova, Loja 2. 
-                      Rua de Alves Redol 1, 2675-285 Odivelas <br />
+                     Centro Comercial Quinta Nova, Loja 2. Rua Prof Dr Egaz Moniz, 2675-344 Odivelas <br />
                       Lisboa, Portugal
                     </p>
                   </div>
@@ -244,7 +243,7 @@ const Contact = () => {
                   height="100%" 
                   frameBorder="0" 
                   scrolling="no" 
-                  src="https://maps.google.com/maps?q=Rua+de+Alves+Redol+1,+2675-285+Odivelas&t=&z=15&ie=UTF8&iwloc=&output=embed"
+                  src="https://maps.google.com/maps?q=Centro+Comercial+Quinta+Nova,+Loja+2.+Rua+Prof+Dr+Egaz+Moniz,+2675-344+Odivelas&t=&z=15&ie=UTF8&iwloc=&output=embed"
                 ></iframe>
               </div>
             </div>

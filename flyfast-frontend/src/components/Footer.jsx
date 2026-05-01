@@ -91,8 +91,9 @@ const Footer = () => {
                 <h4 className="font-bold">🇦🇴 Angola</h4>
                 <p className="text-gray-300">
 
-                  Rua direita do colegio São Vicente de Paulo<br />
-                  Luanda Sul, Viana, Angola
+                  Desvio do Zango, Estrada directa do Viana Parque Sentido Viadulto do Zango<br />
+                  Luanda, Angola
+                  
                 </p>
               </div>
               <div>
