@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTracking } from '../hooks/useTracking';
 import { useParams } from 'react-router-dom';
-import { FaSearch, FaSpinner, FaExclamationCircle, FaBell, FaEnvelope } from 'react-icons/fa';
+import { FaSearch, FaSpinner, FaExclamationCircle, FaBell, FaEnvelope, FaSync } from 'react-icons/fa';
 import { MapContainer, TileLayer, Marker, Polyline, useMap, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -62,7 +62,8 @@ const Tracking = () => {
   const urlCode = params.id || params.trackingCode;
   
   const [trackingCode, setTrackingCode] = useState(urlCode || '');
-  const { trackingInfo, isLoading, error, fetchTrackingInfo } = useTracking();
+  const { trackingInfo, isLoading, error, fetchTrackingInfo, forceRefresh } = useTracking();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Estado para a subscrição de notificações
   const [emailForUpdates, setEmailForUpdates] = useState('');
@@ -78,6 +79,15 @@ const Tracking = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     fetchTrackingInfo(trackingCode);
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await forceRefresh();
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const handleSubscribe = async (e) => {
@@ -147,23 +157,45 @@ const Tracking = () => {
   };
 
   // Deriva os dados mais recentes do histórico para garantir que a UI está sempre atualizada.
-  const sortedHistory = trackingInfo?.history?.length > 0 
-    ? [...trackingInfo.history].sort((a, b) => {
-        const dateA = a.date ? new Date(a.date).getTime() : 0;
-        const dateB = b.date ? new Date(b.date).getTime() : 0;
-        return (isNaN(dateA) ? 0 : dateA) - (isNaN(dateB) ? 0 : dateB);
-      })
-    : [];
+  const sortedHistory = useMemo(() => {
+    if (!trackingInfo?.history?.length) return [];
+    
+    // Ordena por data (crescente) para garantir que o último é o mais recente
+    const sorted = [...trackingInfo.history].sort((a, b) => {
+      const dateA = a.date ? new Date(a.date).getTime() : 0;
+      const dateB = b.date ? new Date(b.date).getTime() : 0;
+      
+      // Se ambas têm datas válidas, compara
+      if (dateA && dateB) return dateA - dateB;
+      
+      // Se uma não tem data, coloca no final
+      if (!dateA && dateB) return 1;
+      if (dateA && !dateB) return -1;
+      
+      // Se nenhuma tem data, mantém a ordem original
+      return 0;
+    });
+    
+    return sorted;
+  }, [trackingInfo?.history]);
 
   const latestHistoryEntry = sortedHistory.length > 0
     ? sortedHistory[sortedHistory.length - 1]
     : null;
 
-  // Usa os dados do último evento do histórico, ou faz fallback para os dados principais do envio.
+  // Prioridade: últimos dados do histórico > dados principais do envio
+  // IMPORTANTE: Usar SEMPRE o status do backend, nunca valores em cache
   const displayLocation = latestHistoryEntry?.location || trackingInfo?.currentLocation;
   const displayStatus = latestHistoryEntry?.status || trackingInfo?.status;
   const displayLastUpdate = latestHistoryEntry?.date || trackingInfo?.lastUpdate;
   const statusLower = displayStatus ? displayStatus.toLowerCase() : '';
+
+  // Debug: Log apenas quando status muda
+  useEffect(() => {
+    if (trackingInfo?.code && displayStatus) {
+      console.log(`[Tracking] ${trackingInfo.code} - Status: "${displayStatus}", Histórico: ${sortedHistory.length} entradas`);
+    }
+  }, [displayStatus, trackingInfo?.code, sortedHistory.length]);
 
   // Lógica inteligente para determinar a localização no mapa com base no status e rota
   const getMapLocation = () => {
@@ -299,33 +331,40 @@ const Tracking = () => {
             </div>
 
             <div className="mb-8 bg-gray-50 p-4 rounded-lg">
-              <p className="text-lg mb-2">
-                <strong>Estado Atual:</strong>
-                <span className={`ml-2 px-3 py-1 rounded-full text-sm font-bold ${
-                  displayStatus === 'Entregue' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                }`}>
-                  {displayStatus}
-                </span>
-              </p>
-              <p className="text-gray-600">
-                <strong>Rota:</strong> {trackingInfo.from || 'Luanda'} ➝ {trackingInfo.to || 'Lisboa'}
-              </p>
-              <p className="text-gray-500 text-sm mt-2">
-                Última atualização: {displayLastUpdate && !isNaN(new Date(displayLastUpdate).getTime()) 
-                  ? new Date(displayLastUpdate).toLocaleString('pt-PT') 
-                  : 'A aguardar atualização'}
-              </p>
+              <div className="flex justify-between items-start mb-3">
+                <div>
+                  <p className="text-lg mb-2">
+                    <strong>Estado Atual:</strong>
+                    <span className={`ml-2 px-3 py-1 rounded-full text-sm font-bold ${
+                      displayStatus === 'Entregue' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                    }`}>
+                      {displayStatus}
+                    </span>
+                  </p>
+                  <p className="text-gray-600">
+                    <strong>Rota:</strong> {trackingInfo.from || 'Luanda'} ➝ {trackingInfo.to || 'Lisboa'}
+                  </p>
+                  <p className="text-gray-500 text-sm mt-2">
+                    Última atualização: {displayLastUpdate && !isNaN(new Date(displayLastUpdate).getTime()) 
+                      ? new Date(displayLastUpdate).toLocaleString('pt-PT') 
+                      : 'A aguardar atualização'}
+                  </p>
+                </div>
+                <button
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className="ml-4 p-2 rounded-lg bg-white border border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition text-gray-600 hover:text-gray-800 disabled:opacity-50"
+                  title="Atualizar agora"
+                >
+                  <FaSync className={`text-lg ${isRefreshing ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
             </div>
 
             <div>
               <h3 className="font-bold text-xl mb-4 text-gray-700">Histórico de Localizações</h3>
               <ul className="steps steps-vertical">
-                {[...trackingInfo.history]
-                  .sort((a, b) => {
-                    const dateA = a.date ? new Date(a.date).getTime() : 0;
-                    const dateB = b.date ? new Date(b.date).getTime() : 0;
-                    return (isNaN(dateA) ? 0 : dateA) - (isNaN(dateB) ? 0 : dateB);
-                  })
+                {sortedHistory
                   .map((item, index) => (
                   <li key={index} className="step step-primary">
                     <div className="flex flex-col items-start text-left ml-4 mb-2">

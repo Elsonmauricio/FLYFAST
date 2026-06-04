@@ -9,7 +9,7 @@ require('dotenv').config();
 
 console.log('--- Verificando Variáveis de Ambiente Essenciais ---');
 let hasMissingEnvs = false;
-const standardEnvs = ['SHOPIFY_STOREFRONT_TOKEN', 'SHOPIFY_DOMAIN', 'FRONTEND_URL'];
+const standardEnvs = ['SHOPIFY_STOREFRONT_TOKEN', 'SHOPIFY_DOMAIN', 'FRONTEND_URL', 'NODE_ENV'];
 
 standardEnvs.forEach(envVar => {
   if (!process.env[envVar]) {
@@ -19,20 +19,6 @@ standardEnvs.forEach(envVar => {
     console.log(`✅ ${envVar}: Configurada.`);
   }
 });
-
-// Verificação inteligente para credenciais Firebase
-const hasBase64 = !!process.env.FIREBASE_SERVICE_ACCOUNT;
-const hasIndividualKeys = !!process.env.FIREBASE_PROJECT_ID && !!process.env.FIREBASE_CLIENT_EMAIL && !!process.env.FIREBASE_PRIVATE_KEY;
-
-if (hasBase64) {
-    console.log('✅ Credenciais Firebase: Configurada via FIREBASE_SERVICE_ACCOUNT (Base64).');
-} else if (hasIndividualKeys) {
-    console.log('✅ Credenciais Firebase: Configurada via variáveis individuais (PROJECT_ID, CLIENT_EMAIL, PRIVATE_KEY).');
-} else {
-    console.error('❌ Credenciais Firebase: Nenhuma configuração encontrada.');
-    console.error('   Defina FIREBASE_SERVICE_ACCOUNT (em Base64) OU o conjunto de FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, e FIREBASE_PRIVATE_KEY.');
-    hasMissingEnvs = true;
-}
 
 if (hasMissingEnvs) {
   console.error('🚨 ERRO CRÍTICO: Uma ou mais variáveis de ambiente não estão configuradas. O servidor pode não funcionar corretamente.');
@@ -66,24 +52,42 @@ app.set('trust proxy', 1);
 
 // Middlewares de segurança
 app.use(helmet());
+
+// Configuração CORS melhorada
+const allowedOrigins = [
+  process.env.FRONTEND_URL?.trim() || 'http://localhost:3000',
+  'https://flyfast-market.com',
+  'https://www.flyfast-market.com'
+].filter(Boolean); // Remove valores undefined/null
+
 app.use(cors({
   origin: function (origin, callback) {
-    // DEBUG: Adicione este log para ver a origem de cada pedido nos logs da Vercel
-    console.log(`[CORS Check] Pedido recebido da origem: ${origin}`);
+    // DEBUG: Log apenas de origens reais (não "sem header Origin" pois é normal)
+    if (origin) {
+      console.log(`[CORS] ✅ Origem: ${origin}`);
+    }
 
-    // Lista de origens permitidas. Adicione o seu domínio personalizado se tiver um.
-    const allowedOrigins = [process.env.FRONTEND_URL, 'https://flyfast-market.com', 'https://www.flyfast-market.com'];
-
-    // Permitir pedidos sem 'origin' (ex: Postman), de origens na lista,
-    // de qualquer subdomínio vercel.app (para previews) e de localhost (para desenvolvimento).
-    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app') || origin.includes('localhost')) {
+    // Permitir se:
+    // 1. Sem 'origin' header (Postman, alguns tipos de requisições) - NORMAL
+    // 2. Na lista de origens permitidas
+    // 3. localhost / 127.0.0.1
+    // 4. Subdomínio vercel.app
+    if (
+      !origin || 
+      allowedOrigins.includes(origin) || 
+      origin?.includes('localhost') ||
+      origin?.includes('127.0.0.1') ||
+      origin?.endsWith('.vercel.app')
+    ) {
       callback(null, true);
     } else {
-      console.error(`[CORS BLOCK] A origem '${origin}' foi bloqueada pela política de CORS.`);
+      console.error(`[CORS BLOCK] ❌ Origem bloqueada: ${origin}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Rate limiting

@@ -10,10 +10,13 @@ const trackShipment = async (req, res) => {
     const shipmentDoc = await db.collection('shipments').doc(trackingCode).get();
 
     if (!shipmentDoc.exists) {
+      console.warn(`[TRACKING] Envio não encontrado: ${trackingCode}`);
       return res.status(404).json({ error: 'Envio não encontrado.' });
     }
 
     const shipmentData = shipmentDoc.data();
+    console.log(`[TRACKING] Buscando rastreamento para: ${trackingCode}`);
+    console.log(`[TRACKING] Status atual: ${shipmentData.status}`);
 
     // Garante que existe um histórico para exibir
     let history = shipmentData.history || [];
@@ -24,7 +27,7 @@ const trackShipment = async (req, res) => {
             {
                 status: 'Pendente',
                 location: shipmentData.from,
-                date: shipmentData.createdAt,
+                date: shipmentData.createdAt || new Date().toISOString(),
                 description: 'Envio registado no sistema'
             }
         ];
@@ -33,10 +36,16 @@ const trackShipment = async (req, res) => {
              history.push({
                 status: shipmentData.status,
                 location: shipmentData.currentLocation || 'Em trânsito',
-                date: shipmentData.updatedAt,
+                date: shipmentData.updatedAt || new Date().toISOString(),
                 description: `Atualização de estado: ${shipmentData.status}`
             });
         }
+    } else {
+        // Garante que todas as entradas têm datas válidas (ISO format)
+        history = history.map(entry => ({
+            ...entry,
+            date: entry.date ? (typeof entry.date === 'string' ? entry.date : entry.date.toISOString?.() || new Date(entry.date).toISOString()) : new Date().toISOString()
+        }));
     }
 
     const response = {
@@ -50,9 +59,10 @@ const trackShipment = async (req, res) => {
       history: history
     };
 
+    console.log(`[TRACKING] Histórico com ${history.length} entradas | Resposta: ${JSON.stringify(response).length} bytes`);
     res.json(response);
   } catch (error) {
-    console.error('Erro ao rastrear envio:', error);
+    console.error(`[TRACKING ERROR] ${trackingCode}:`, error.message);
     res.status(500).json({ error: 'Erro interno ao rastrear envio.' });
   }
 };

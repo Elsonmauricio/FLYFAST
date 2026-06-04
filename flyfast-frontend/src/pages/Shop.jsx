@@ -80,7 +80,7 @@ const ALL_LANGUAGES = [
   { code: 'fr', name: 'Français' }
 ];
 
-const ShopContent = () => {
+const ShopContent = ({ isShopifyUnavailable, setIsShopifyUnavailable }) => {
   /* O código da loja está comentado para evitar chamadas à API enquanto a loja está inativa */
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -109,11 +109,17 @@ const ShopContent = () => {
   };
 
   useEffect(() => {
-    client.collection.fetchAll().then((fetchedCollections) => {
-      const filtered = fetchedCollections.filter(c => c.title !== 'Página inicial' && c.title !== 'Home page');
-      setCollections(filtered);
-    }).catch(err => console.error("Erro ao buscar coleções:", err));
-  }, []);
+    client.collection.fetchAll()
+      .then((fetchedCollections) => {
+        const filtered = fetchedCollections.filter(c => c.title !== 'Página inicial' && c.title !== 'Home page');
+        setCollections(filtered);
+        setIsShopifyUnavailable(false); // Shopify está respondendo
+      })
+      .catch(err => {
+        console.error("Erro ao buscar coleções:", err);
+        setIsShopifyUnavailable(true); // Shopify não está respondendo
+      });
+  }, [setIsShopifyUnavailable]);
 
   useEffect(() => {
     setLoading(true);
@@ -121,14 +127,19 @@ const ShopContent = () => {
       ? client.collection.fetchWithProducts(selectedCollectionId, {productsFirst: 250}).then(col => col.products)
       : client.product.fetchAll(250);
 
-    fetchPromise.then((fetchedProducts) => {
-      setProducts(fetchedProducts);
-      setLoading(false);
-    }).catch((err) => {
-      setError(err);
-      setLoading(false);
-    });
-  }, [selectedCollectionId]);
+    fetchPromise
+      .then((fetchedProducts) => {
+        setProducts(fetchedProducts);
+        setError(null);
+        setLoading(false);
+        setIsShopifyUnavailable(false); // Shopify está respondendo
+      })
+      .catch((err) => {
+        setError(err);
+        setLoading(false);
+        setIsShopifyUnavailable(true); // Shopify não está respondendo
+      });
+  }, [selectedCollectionId, setIsShopifyUnavailable]);
 
   if (loading) {
     return (
@@ -535,33 +546,32 @@ const ShopContent = () => {
 };
 
 const Shop = () => {
-  // Defina para 'true' para ativar o modo manutenção e evitar erros da API da Shopify.
-  // Defina para 'false' quando a loja Shopify estiver ativa.
-  const isMaintenanceMode = false;
-
-  if (isMaintenanceMode) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4 text-center">
-        <FaExclamationTriangle className="text-6xl text-yellow-500 mb-6" />
-        <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">Loja em Manutenção</h1>
-        <p className="text-lg text-gray-600 max-w-md mx-auto mb-8">
-          Estamos a realizar melhorias na nossa loja online para lhe oferecer uma experiência ainda melhor.<br/>
-          Por favor, volte mais tarde.
-        </p>
-        <a 
-          href="/"
-          className="bg-blue-900 text-white px-8 py-3 rounded-full font-bold hover:bg-blue-800 transition-colors"
-        >
-          Voltar ao Início
-        </a>
-      </div>
-    );
-  }
+  // Estado para detectar automaticamente se Shopify não está respondendo
+  const [isShopifyUnavailable, setIsShopifyUnavailable] = useState(false);
 
   return (
     <ShopifyCartProvider>
-      <ShopContent />
-      <CartDrawer />
+      {isShopifyUnavailable ? (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4 text-center">
+          <FaExclamationTriangle className="text-6xl text-yellow-500 mb-6" />
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">Loja em Manutenção</h1>
+          <p className="text-lg text-gray-600 max-w-md mx-auto mb-8">
+            Estamos a realizar melhorias na nossa loja online para lhe oferecer uma experiência ainda melhor.<br/>
+            Por favor, volte mais tarde.
+          </p>
+          <a 
+            href="/"
+            className="bg-blue-900 text-white px-8 py-3 rounded-full font-bold hover:bg-blue-800 transition-colors"
+          >
+            Voltar ao Início
+          </a>
+        </div>
+      ) : (
+        <>
+          <ShopContent isShopifyUnavailable={isShopifyUnavailable} setIsShopifyUnavailable={setIsShopifyUnavailable} />
+          <CartDrawer />
+        </>
+      )}
     </ShopifyCartProvider>
   );
 };
