@@ -57,6 +57,11 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
+                <Link to="/about" className="hover:text-flyfast-yellow transition">
+                  Sobre Nós
+                </Link>
+              </li>
+              <li>
                 <Link to="/contact" className="hover:text-flyfast-yellow transition">
                   Contacte-nos
                 </Link>
