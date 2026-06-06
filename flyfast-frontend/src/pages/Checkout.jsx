@@ -20,7 +20,7 @@ const Checkout = () => {
     },
     {
       question: "Qual é o custo de envio?",
-      answer: "Oferecemos diferentes opções de envio com preços competitivos. O custo de envio para algumas encomendas depende do peso e destino, para outras tem custo fixo consulte a nossa tabela de preços na secção rotas. Você pode calcular o custo de envio antes de confirmar a compra."
+      answer: "Oferecemos diferentes opções de envio com preços competitivos. O custo de envio para algumas encomendas depende do peso e destino, para outras tem um custo fixo, consulte a nossa tabela de preços na secção rotas. Você pode calcular o custo de envio antes de confirmar a compra. Se souber o peso da sua encomenda, poderá obter uma estimativa de preço na secção Rotas, clicando em Reservar."
     },
     {
       question: "O que devo fazer se meu envio se atrasar?",
