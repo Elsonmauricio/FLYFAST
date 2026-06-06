@@ -16,8 +16,8 @@ const Checkout = () => {
     },
     {
       question: "Qual é o tempo de entrega estimado?",
-      answer: "O tempo estimado de entrega para encomendas de pequeno porte é de até 5 dias úteis após a data de envio.
-               Já para encomendas de grande porte e associadas a grandes contribuintes podem levar de 5 até 15 dias úteis após a data de envio, dependendo da localização."
+      answer: "O tempo estimado de entrega para encomendas de pequeno porte é de até 5 dias úteis após a data de envio."
+      answer: "Já para encomendas de grande porte e associadas a grandes contribuintes podem levar de 5 até 15 dias úteis após a data de envio, dependendo da localização."
     },
     {
       question: "Qual é o custo de envio?",
