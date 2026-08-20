@@ -16,11 +16,11 @@ const Checkout = () => {
     },
     {
       question: "Qual é o tempo de entrega estimado?",
-      answer: "Os tempos de entrega variam conforme o destino. Para Luanda e cidades próximas: 1-3 dias úteis. Para outras regiões de Angola: 3-7 dias úteis. Para Portugal e Europa: 5-15 dias úteis, dependendo da localização."
+      answer: "O tempo estimado de entrega para encomendas de pequeno porte é de até 5 dias úteis após a data de envio. Já para encomendas de grande porte e associadas a grandes contribuintes podem levar de 5 até 15 dias úteis após a data de envio, dependendo da localização."
     },
     {
       question: "Qual é o custo de envio?",
-      answer: "O custo de envio depende do peso e destino. Oferecemos diferentes opções de envio com preços competitivos. Você pode calcular o custo no carrinho antes de confirmar a compra."
+      answer: "Oferecemos diferentes opções de envio com preços competitivos. O custo de envio para algumas encomendas depende do peso e destino, para outras tem um custo fixo, consulte a nossa tabela de preços na secção rotas. Você pode calcular o custo de envio antes de confirmar a compra. Se souber o peso da sua encomenda, poderá obter uma estimativa de preço na secção Rotas, clicando em Reservar."
     },
     {
       question: "O que devo fazer se meu envio se atrasar?",
