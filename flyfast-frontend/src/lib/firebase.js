@@ -13,6 +13,13 @@ const firebaseConfig = {
     appId: process.env.REACT_APP_FIREBASE_APP_ID,
 };
 
+// Adicione estes logs para verificar os valores
+console.log("Firebase Config carregada:");
+console.log("REACT_APP_FIREBASE_API_KEY:", firebaseConfig.apiKey ? "Configurada" : "NÃO CONFIGURADA");
+console.log("REACT_APP_FIREBASE_AUTH_DOMAIN:", firebaseConfig.authDomain ? "Configurada" : "NÃO CONFIGURADA");
+console.log("REACT_APP_FIREBASE_PROJECT_ID:", firebaseConfig.projectId ? "Configurada" : "NÃO CONFIGURADA");
+// Você pode logar todas as chaves se quiser
+
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);

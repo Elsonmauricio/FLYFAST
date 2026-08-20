@@ -12,7 +12,7 @@ import Account from './pages/Account';
 import Login from './pages/Login'; // Importar a nova página de Login
 import Register from './pages/Register';
 import Admin from './pages/Admin';
-import About from './pages/Checkout'; // Sobre Nós + FAQ
+import About from './pages/About'; // Sobre Nós + FAQ
 import { CartProvider } from './contexts/CartContext';
 import { AuthProvider } from './contexts/AuthContext'; // Importar o AuthProvider
 import { ToastProvider } from './contexts/ToastContext'; // Importar o ToastProvider

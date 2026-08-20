@@ -55,6 +55,7 @@ const AdminContent = () => {
   const [userPage, setUserPage] = useState(0);
   const [userCursors, setUserCursors] = useState([null]); // Pilha de cursores (IDs)
   const [hasMoreUsers, setHasMoreUsers] = useState(false);
+  const [userSearch, setUserSearch] = useState('');
 
   // Estados para visualização de detalhes do pedido Personal Shopper
   const [selectedRequest, setSelectedRequest] = useState(null);
@@ -1008,6 +1009,16 @@ const AdminContent = () => {
                 </span>
               </div>
             </div>
+
+            <div className="p-4 border-b">
+              <input
+                type="text"
+                placeholder="Pesquisar por nome ou email..."
+                className="border rounded p-2 text-sm w-full md:w-96"
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+              />
+            </div>
             
             {/* Modal de Detalhes do Utilizador */}
             {isUserDetailsModalOpen && selectedUser && (
@@ -1092,7 +1103,15 @@ const AdminContent = () => {
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                    {users.map(user => (
+                    {users
+                        .filter(user => {
+                            const search = userSearch.toLowerCase();
+                            return (
+                                (user.name && user.name.toLowerCase().includes(search)) ||
+                                (user.email && user.email.toLowerCase().includes(search))
+                            );
+                        })
+                        .map(user => (
                     <tr key={user.id} className="hover:bg-gray-50">
                         <td className="p-4 whitespace-nowrap">{user.name || 'Sem nome'}</td>
                         <td className="p-4 whitespace-nowrap">{user.email}</td>
