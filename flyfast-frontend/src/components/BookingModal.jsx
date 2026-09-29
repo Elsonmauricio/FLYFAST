@@ -1,11 +1,20 @@
 import React, { useState } from 'react';
 import { FaTimes, FaPlane, FaWeightHanging, FaBoxOpen, FaSpinner } from 'react-icons/fa';
+import { parsePrice } from './formatting';
 
-const BookingModal = ({ isOpen, onClose, route, onSubmit, isLoading }) => {
+const BookingModal = ({ isOpen, onClose, route, onSubmit, isLoading, pricePerKg }) => {
   const [weight, setWeight] = useState('');
   const [description, setDescription] = useState('');
 
   if (!isOpen || !route) return null;
+
+  const kgToUse = parsePrice(pricePerKg);
+  const routePrice = parsePrice(route.price);
+  const effectivePricePerKg = Number.isFinite(kgToUse) ? kgToUse : routePrice;
+  const parsedWeight = parseFloat(weight);
+  const estimatedPrice = Number.isFinite(parsedWeight) && Number.isFinite(effectivePricePerKg)
+    ? Math.round(parsedWeight * effectivePricePerKg * 100) / 100
+    : 0;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -54,7 +63,7 @@ const BookingModal = ({ isOpen, onClose, route, onSubmit, isLoading }) => {
               required
             />
             <p className="text-xs text-gray-500 mt-1">
-              Preço estimado: {weight ? (parseFloat(weight) * parseFloat(route.price.replace(/[^0-9.]/g, ''))).toLocaleString('pt-PT', {style: 'currency', currency: 'EUR'}) : '0 €'}
+              Preço estimado: {estimatedPrice.toLocaleString('pt-PT', {style: 'currency', currency: 'EUR'})}
             </p>
           </div>
 

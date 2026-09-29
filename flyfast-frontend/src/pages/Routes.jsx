@@ -293,6 +293,7 @@ const Routes = () => {
           isOpen={isBookingModalOpen}
           onClose={() => setIsBookingModalOpen(false)}
           route={selectedRoute}
+          pricePerKg={pricing.pricePerKg}
           onSubmit={handleBookingSubmit}
           isLoading={isBookingLoading}
         />
