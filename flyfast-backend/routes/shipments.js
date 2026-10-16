@@ -415,3 +415,9 @@ router.put('/:id', authenticate, async (req, res) => {
 });
 
 module.exports = router;
+
+
+const { bulkUpdateShipmentStatus } = require('../controllers/shipmentController');
+router.patch('/bulk-update', authenticate, bulkUpdateShipmentStatus);
+
+module.exports = router;

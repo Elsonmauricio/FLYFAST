@@ -39,6 +39,10 @@ const AdminContent = () => {
   const [editingShipment, setEditingShipment] = useState(null);
   const [isEditShipmentModalOpen, setIsEditShipmentModalOpen] = useState(false);
   const [shipmentSearch, setShipmentSearch] = useState('');
+  const [selectedShipmentIds, setSelectedShipmentIds] = useState(new Set());
+  const [isBulkUpdateModalOpen, setIsBulkUpdateModalOpen] = useState(false);
+  const [bulkNewStatus, setBulkNewStatus] = useState('');
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
 
   // Handler para limpar campos ao trocar o tipo de cliente
   const handleClientTypeChange = (isRegistered) => {
@@ -510,6 +514,67 @@ const AdminContent = () => {
     }
   };
 
+  const toggleAllShipments = (checked, filteredList) => {
+    if (checked) {
+      setSelectedShipmentIds(new Set(filteredList.map(s => s.id)));
+    } else {
+      setSelectedShipmentIds(new Set());
+    }
+  };
+
+  const toggleShipment = (id) => {
+    setSelectedShipmentIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const clearSelectedShipments = () => {
+    setSelectedShipmentIds(new Set());
+  };
+
+  const handleBulkUpdateSubmit = async (e) => {
+    e.preventDefault();
+    if (selectedShipmentIds.size === 0 || !bulkNewStatus) return;
+
+    if (!window.confirm(`Tem a certeza que deseja atualizar ${selectedShipmentIds.size} envio(s) para o estado "${bulkNewStatus}"?`)) {
+      return;
+    }
+
+    try {
+      setIsBulkUpdating(true);
+      const token = authState.token;
+      const response = await fetch('/api/shipments/bulk-update', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify({
+          ids: Array.from(selectedShipmentIds),
+          newStatus: bulkNewStatus
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        showAlert('success', `Atualização concluída: ${result.updated ?? result.count ?? ''} registo(s) atualizado(s).`);
+        clearSelectedShipments();
+        setIsBulkUpdateModalOpen(false);
+        setBulkNewStatus('');
+        fetchShipments();
+      } else {
+        const err = await response.json();
+        showAlert('error', err.error || 'Erro ao atualizar envios em massa');
+      }
+    } catch (error) {
+      console.error(error);
+      showAlert('error', 'Erro ao atualizar envios em massa');
+    } finally {
+      setIsBulkUpdating(false);
+    }
+  };
   const handleExportCSV = () => {
     const filteredShipments = shipments.filter(s => 
       s.id.toLowerCase().includes(shipmentSearch.toLowerCase())
@@ -1451,10 +1516,41 @@ const AdminContent = () => {
                 </div>
              )}
 
-             <div className="overflow-x-auto">
+             {/* Barra de Ações em Massa - CORRIGIDA E ÚNICA */}
+             <div className="p-4 bg-blue-50 border-b flex justify-between items-center">
+                <div className="text-sm font-semibold text-blue-800">
+                  {selectedShipmentIds.size} envio(s) selecionado(s)
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setIsBulkUpdateModalOpen(true)}
+                    className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm font-bold"
+                    disabled={selectedShipmentIds.size === 0}
+                  >
+                    Alterar Estado Selecionados
+                  </button>
+                  <button
+                    onClick={clearSelectedShipments}
+                    className="bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300 text-sm"
+                    disabled={selectedShipmentIds.size === 0}
+                  >
+                    Limpar Seleção
+                  </button>
+                </div>
+            </div>
+
+            <div className="overflow-x-auto">
                 <table className="w-full">
                 <thead className="bg-gray-50 border-b">
                     <tr>
+                    <th className="p-4 text-left">
+                      <input
+                        type="checkbox"
+                        checked={(() => { const f = shipments.filter(s => s.id.toLowerCase().includes(shipmentSearch.toLowerCase())); return f.length > 0 && f.every(s => selectedShipmentIds.has(s.id)); })()}
+                        onChange={(e) => { const f = shipments.filter(s => s.id.toLowerCase().includes(shipmentSearch.toLowerCase())); toggleAllShipments(e.target.checked, f); }}
+                        aria-label="Selecionar todos os envios da página atual"
+                      />
+                    </th>
                     <th className="p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                     <th className="p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
                     <th className="p-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Peso</th>
@@ -1470,6 +1566,7 @@ const AdminContent = () => {
                       .filter(s => s.id.toLowerCase().includes(shipmentSearch.toLowerCase()))
                       .map(shipment => (
                     <tr key={shipment.id} className="hover:bg-gray-50">
+                        <td className="p-4"><input type="checkbox" checked={selectedShipmentIds.has(shipment.id)} onChange={() => toggleShipment(shipment.id)} aria-label={`Selecionar envio ${shipment.id}`} /></td>
                         <td className="p-4 whitespace-nowrap font-mono text-sm">{shipment.id}</td>
                         <td className="p-4 whitespace-nowrap text-sm">
                           <div className="font-bold text-gray-900">{shipment.userEmail || users.find(u => u.id === shipment.userId)?.email || 'Email N/D'}</div>
@@ -1498,6 +1595,56 @@ const AdminContent = () => {
                 </tbody>
                 </table>
             </div>
+
+            {/* Modal de Atualização em Massa - CORRIGIDO E ÚNICO */}
+            {isBulkUpdateModalOpen && (
+               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                 <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+                   <div className="p-6 border-b">
+                     <h3 className="text-xl font-bold text-gray-800">Atualização em Massa de Estados</h3>
+                     <p className="text-sm text-gray-600 mt-2">
+                       Está prestes a alterar o estado de <strong>{selectedShipmentIds.size}</strong> envio(s) selecionado(s). Esta ação não pode ser desfeita facilmente.
+                     </p>
+                   </div>
+                   <form onSubmit={handleBulkUpdateSubmit} className="p-6 space-y-4">
+                     <div>
+                       <label className="block text-sm font-bold text-gray-700 mb-1">Novo Estado</label>
+                       <select
+                         className="w-full border rounded p-2"
+                         value={bulkNewStatus}
+                         onChange={(e) => setBulkNewStatus(e.target.value)}
+                         required
+                       >
+                         <option value="">Selecione um estado</option>
+                         <option value="Pendente">Pendente</option>
+                         <option value="Em Processamento">Em Processamento</option>
+                         <option value="Em Trânsito">Em Trânsito</option>
+                         <option value="Chegou ao Destino">Chegou ao Destino</option>
+                         <option value="Entregue">Entregue</option>
+                         <option value="Cancelado">Cancelado</option>
+                       </select>
+                     </div>
+                     <div className="flex justify-end space-x-3 mt-6">
+                       <button
+                         type="button"
+                         onClick={() => setIsBulkUpdateModalOpen(false)}
+                         className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+                         disabled={isBulkUpdating}
+                       >
+                         Cancelar
+                       </button>
+                       <button
+                         type="submit"
+                         className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                         disabled={isBulkUpdating || !bulkNewStatus}
+                       >
+                         {isBulkUpdating ? 'Atualizando...' : 'Confirmar Atualização'}
+                       </button>
+                     </div>
+                   </form>
+                 </div>
+               </div>
+             )}
           </div>
         )}
 
@@ -1592,7 +1739,7 @@ const AdminContent = () => {
                 </div>
              )}
 
-             <div className="overflow-x-auto">
+            <div className="overflow-x-auto">
                 <table className="w-full">
                 <thead className="bg-gray-50 border-b">
                     <tr>
@@ -1831,44 +1978,44 @@ const AdminContent = () => {
                             {isLoadingRouteShipments ? (
                                 <div className="flex justify-center p-8"><FaSpinner className="animate-spin text-2xl text-flyfast-blue" /></div>
                             ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead className="bg-gray-50">
-                                        <tr>
-                                            <th className="p-3 text-left">ID</th>
-                                            <th className="p-3 text-left">Cliente</th>
-                                            <th className="p-3 text-left">Peso</th>
-                                            <th className="p-3 text-left">Conteúdo</th>
-                                            <th className="p-3 text-left">Estado</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y">
-                                        {routeShipments.length === 0 ? (
-                                            <tr><td colSpan="5" className="p-4 text-center text-gray-500">Nenhuma reserva encontrada para esta rota.</td></tr>
-                                        ) : (
-                                            routeShipments.map(s => (
-                                                <tr key={s.id} className={`hover:bg-gray-50 ${s.status === 'Cancelado' ? 'opacity-50 bg-gray-100' : ''}`}>
-                                                    <td className="p-3 font-mono text-xs">{s.id.substring(0, 8)}...</td>
-                                                    <td className="p-3">
-                                                        <div className="font-bold">{s.userEmail || 'N/D'}</div>
-                                                        <div className="text-xs text-gray-500">{s.userId}</div>
-                                                    </td>
-                                                    <td className="p-3 font-bold">{s.weight} kg</td>
-                                                    <td className="p-3 truncate max-w-xs">{Array.isArray(s.items) ? s.items.join(', ') : s.items}</td>
-                                                    <td className="p-3">
-                                                        <span className={`px-2 py-1 rounded-full text-xs ${
-                                                            s.status === 'Cancelado' ? 'bg-red-100 text-red-800' : 
-                                                            s.status === 'Entregue' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                                                        }`}>
-                                                            {s.status}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="p-3 text-left">ID</th>
+                                                <th className="p-3 text-left">Cliente</th>
+                                                <th className="p-3 text-left">Peso</th>
+                                                <th className="p-3 text-left">Conteúdo</th>
+                                                <th className="p-3 text-left">Estado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y">
+                                            {routeShipments.length === 0 ? (
+                                                <tr><td colSpan="5" className="p-4 text-center text-gray-500">Nenhuma reserva encontrada para esta rota.</td></tr>
+                                            ) : (
+                                                routeShipments.map(s => (
+                                                    <tr key={s.id} className={`hover:bg-gray-50 ${s.status === 'Cancelado' ? 'opacity-50 bg-gray-100' : ''}`}>
+                                                        <td className="p-3 font-mono text-xs">{s.id.substring(0, 8)}...</td>
+                                                        <td className="p-3">
+                                                            <div className="font-bold">{s.userEmail || 'N/D'}</div>
+                                                            <div className="text-xs text-gray-500">{s.userId}</div>
+                                                        </td>
+                                                        <td className="p-3 font-bold">{s.weight} kg</td>
+                                                        <td className="p-3 truncate max-w-xs">{Array.isArray(s.items) ? s.items.join(', ') : s.items}</td>
+                                                        <td className="p-3">
+                                                            <span className={`px-2 py-1 rounded-full text-xs ${
+                                                                s.status === 'Cancelado' ? 'bg-red-100 text-red-800' : 
+                                                                s.status === 'Entregue' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                                                            }`}>
+                                                                {s.status}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
                             )}
                         </div>
                         <div className="p-6 border-t bg-gray-50 flex justify-end">
@@ -1878,6 +2025,7 @@ const AdminContent = () => {
                 </div>
              )}
 
+             {/* TABELA DE ROTAS */}
              <div className="overflow-x-auto">
                 <table className="w-full">
                 <thead className="bg-gray-50 border-b">
@@ -2110,7 +2258,7 @@ const AdminContent = () => {
              <div className="p-4 border-b bg-gray-50">
                 <h3 className="font-bold text-gray-700">Mensagens de Contacto</h3>
              </div>
-             <div className="overflow-x-auto">
+            <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b">
                     <tr>
