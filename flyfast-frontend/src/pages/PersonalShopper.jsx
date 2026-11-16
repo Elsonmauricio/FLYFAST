@@ -91,11 +91,11 @@ const PersonalShopper = () => {
             </h2>
             <div className="flex flex-col md:flex-row justify-center items-center gap-8">
               <div className="text-center">
-                <div className="text-3xl font-bold text-flyfast-blue">Compras Online: 6€</div>
+                <div className="text-3xl font-bold text-flyfast-blue">Compras Online: 15€</div>
                 <p className="text-gray-600">por loja</p>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-flyfast-blue">Compras Físicas: 12€</div>
+                <div className="text-3xl font-bold text-flyfast-blue">Compras Físicas: 15€</div>
                 <p className="text-gray-600">Por loja</p>
               </div>
               <div className="text-2xl">+</div>
